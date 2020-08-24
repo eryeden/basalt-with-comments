@@ -629,14 +629,25 @@ void KeypointVoEstimator::optimize() {
 
     AbsOrderMap aom;
 
+
+    /**
+     * @brief 今回のSiding windowに含まれるPoseの状態ベクトルにおけるIndexを決めている
+     */
     for (const auto& kv : frame_poses) {
+      //! kv.first : FramePoseのIndex
+
       aom.abs_order_map[kv.first] = std::make_pair(aom.total_size, POSE_SIZE);
 
       // Check that we have the same order as marginalization
+      //! MarginalizeしたSystemMatrixにおけるPoseの位置と今回のPoseの位置が同じことを保証する
+      //! 豆知識として、ここの`BASALT_ASSERT`はTrueで何もしない。FalseでAbortになる。
+      //! ほとんどの場合、ASERTの中身はTrueなので`__builtin_expect(x, 1)`として、CPUかコンパイラの予測分岐にヒントをを与えている。
+      //! こでれASSERTの速度ロスはだいぶ小さくなるらしい。
       if (marg_order.abs_order_map.count(kv.first) > 0)
         BASALT_ASSERT(marg_order.abs_order_map.at(kv.first) ==
                       aom.abs_order_map.at(kv.first));
 
+      //! ここが状態ベクトルのインデックスと同等になるはず
       aom.total_size += POSE_SIZE;
       aom.items++;
     }
@@ -652,6 +663,9 @@ void KeypointVoEstimator::optimize() {
     for (int iter = 0; iter < config.vio_max_iterations; iter++) {
       auto t1 = std::chrono::high_resolution_clock::now();
 
+      /**
+       * @brief Landmarkの観測情報を取得する、Hessianがすでに計算されているポイ
+       */
       double rld_error;
       Eigen::aligned_vector<RelLinData> rld_vec;
       linearizeHelper(rld_vec, lmdb.getObservations(), rld_error);
@@ -662,8 +676,14 @@ void KeypointVoEstimator::optimize() {
       tbb::blocked_range<Eigen::aligned_vector<RelLinData>::iterator> range(
           rld_vec.begin(), rld_vec.end());
 
+      /**
+       * @brief おそらく、ここで並列的にH, bの計算が行われている
+       */
       tbb::parallel_reduce(range, lopt);
 
+      /**
+       * @brief 計算してあるHessian;H、Gradient:bにMarginalized PriorのHm, bmを加算等している
+       */
       double marg_prior_error = 0;
       linearizeMargPrior(marg_order, marg_H, marg_b, aom, lopt.accum.getH(),
                          lopt.accum.getB(), marg_prior_error);

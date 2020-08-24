@@ -118,15 +118,25 @@ class LandmarkDatabase {
   }
 
  private:
+
+  //! @brief <KeyPoint ID(int), Landmarkの推定位置？>
+  //! @details KeyPointIDはINTになっている。
   Eigen::aligned_unordered_map<int, KeypointPosition> kpts;
+
+  //! @brief <CameraFrameID, <CameraFrameID, KeyPointPosition and KeyPointID>>
+  //! @details TODO カメラIDと、<FrameID, [KeyPointPosition]>みたいなマップ？
   Eigen::aligned_map<
       TimeCamId,
       Eigen::aligned_map<TimeCamId, Eigen::aligned_vector<KeypointObservation>>>
       obs;
 
+  //! @brief <CameraFrameID, [Observing keypoint id]>
+  //! @details <(カメラID,FrameID), [観測しているKeyPointIDのリスト？]>という感じのMap？
   std::unordered_map<TimeCamId, std::set<int>> host_to_kpts;
 
   int num_observations = 0;
+  //! @brief <KeyPointID, Number of observation?>
+  //! @details <KeyPointID, [KeyPointID]のKeyPointが観測された回数？>という感じのMap？
   Eigen::aligned_unordered_map<int, int> kpts_num_obs;
 };
 

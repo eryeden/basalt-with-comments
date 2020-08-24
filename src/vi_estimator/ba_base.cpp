@@ -240,7 +240,9 @@ void BundleAdjustmentBase::linearizeHelper(
   std::vector<TimeCamId> obs_tcid_vec;
   for (const auto& kv : obs_to_lin) {
     obs_tcid_vec.emplace_back(kv.first);
-    rld_vec.emplace_back(lmdb.numLandmarks(), kv.second.size());
+    rld_vec.emplace_back(lmdb.numLandmarks(), //! Sliding windowに入っているLandmarkの数
+                         kv.second.size() //! このFrameで... TODO
+                         );
   }
 
   tbb::parallel_for(
