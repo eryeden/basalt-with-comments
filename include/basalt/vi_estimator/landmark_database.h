@@ -123,8 +123,13 @@ class LandmarkDatabase {
   //! @details KeyPointIDはINTになっている。
   Eigen::aligned_unordered_map<int, KeypointPosition> kpts;
 
-  //! @brief <CameraFrameID, <CameraFrameID, KeyPointPosition and KeyPointID>>
-  //! @details TODO カメラIDと、<FrameID, [KeyPointPosition]>みたいなマップ？
+  /**
+   * @brief <CameraFrameID, <CameraFrameID, KeyPointPosition and KeyPointID>>
+   * @details
+   * Landmarkは初めて観測されたKeyFrameのカメラ座標系で表現されて保持される。
+   * このことから、このMapは以下の対応だと予想される。
+   * <LMHostingCameraFrameID, <LMHostingCameraFrameIDで初めて観測されたLMを観測したCameraFrameID, [観測したKeypointの位置情報]>>
+   */
   Eigen::aligned_map<
       TimeCamId,
       Eigen::aligned_map<TimeCamId, Eigen::aligned_vector<KeypointObservation>>>

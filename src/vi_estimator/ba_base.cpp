@@ -239,9 +239,11 @@ void BundleAdjustmentBase::linearizeHelper(
 
   std::vector<TimeCamId> obs_tcid_vec;
   for (const auto& kv : obs_to_lin) {
+    //! kv.first : KeyPointを保持しているKeyFrameのFrameID
     obs_tcid_vec.emplace_back(kv.first);
+    //! kv.second : kv.firstで初めて観測したLMをもう一度観測したFrameID（おろそらく自分も含む）と、観測KeyPoint位置のリストのMap
     rld_vec.emplace_back(lmdb.numLandmarks(), //! Sliding windowに入っているLandmarkの数
-                         kv.second.size() //! このFrameで... TODO
+                         kv.second.size() //! 自分も含めてHostしているKeyPointのどれか一つでも観測された回数（Poseの個数）
                          );
   }
 
@@ -249,8 +251,12 @@ void BundleAdjustmentBase::linearizeHelper(
       tbb::blocked_range<size_t>(0, obs_tcid_vec.size()),
       [&](const tbb::blocked_range<size_t>& range) {
         for (size_t r = range.begin(); r != range.end(); ++r) {
-          auto kv = obs_to_lin.find(obs_tcid_vec[r]);
+          auto kv //! 対象のKeyFrameについてLMの保持情報
+              = obs_to_lin.find(
+              obs_tcid_vec[r] //! LMをHostしているKeyFrameのID
+              );
 
+          //! r番目のKeyFrameについての情報を保存するためのコンテナへの参照
           RelLinData& rld = rld_vec[r];
 
           rld.error = 0;

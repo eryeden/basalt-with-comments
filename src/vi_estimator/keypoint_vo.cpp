@@ -668,7 +668,10 @@ void KeypointVoEstimator::optimize() {
        */
       double rld_error;
       Eigen::aligned_vector<RelLinData> rld_vec;
-      linearizeHelper(rld_vec, lmdb.getObservations(), rld_error);
+      linearizeHelper(rld_vec,
+                      lmdb.getObservations(), //! KeyPointの感測情報、ここには画像座標系のKeyPoint位置(u,v)のみ保持されている
+                      rld_error
+                      );
 
       BundleAdjustmentBase::LinearizeAbsReduce<DenseAccumulator<double>> lopt(
           aom);
