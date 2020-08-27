@@ -39,24 +39,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace basalt {
 
+/**
+ * @brief
+ * @param T_w_i_h : IMU to World, Host Frame
+ * @param T_i_c_h : Camera to IMU, Host Frame
+ * @param T_w_i_t : IMU to World, Target Frame
+ * @param T_i_c_t : Camera to IMU, Target Frame
+ * @param d_rel_d_h
+ * @param d_rel_d_t
+ * @return
+ */
 Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
                                                   const Sophus::SE3d& T_i_c_h,
                                                   const Sophus::SE3d& T_w_i_t,
                                                   const Sophus::SE3d& T_i_c_t,
                                                   Sophus::Matrix6d* d_rel_d_h,
                                                   Sophus::Matrix6d* d_rel_d_t) {
-  Sophus::SE3d tmp2 = (T_i_c_t).inverse();
+  Sophus::SE3d tmp2 = (T_i_c_t).inverse(); // Camera to IMU, Target Frame
 
-  Sophus::SE3d T_t_i_h_i;
+  Sophus::SE3d T_t_i_h_i; //Transformation : IMU,host to IMU,target
   T_t_i_h_i.so3() = T_w_i_t.so3().inverse() * T_w_i_h.so3();
   T_t_i_h_i.translation() =
       T_w_i_t.so3().inverse() * (T_w_i_h.translation() - T_w_i_t.translation());
 
-  Sophus::SE3d tmp = tmp2 * T_t_i_h_i;
-  Sophus::SE3d res = tmp * T_i_c_h;
+  Sophus::SE3d tmp = tmp2 * T_t_i_h_i; // IMU,host to Camera,target
+  Sophus::SE3d res = tmp * T_i_c_h; // Camera,host to Camera,target
 
   if (d_rel_d_h) {
-    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix();
+    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix(); // World to IMU
 
     Sophus::Matrix6d RR;
     RR.setZero();
@@ -251,32 +261,58 @@ void BundleAdjustmentBase::linearizeHelper(
       tbb::blocked_range<size_t>(0, obs_tcid_vec.size()),
       [&](const tbb::blocked_range<size_t>& range) {
         for (size_t r = range.begin(); r != range.end(); ++r) {
-          auto kv //! 対象のKeyFrameについてLMの保持情報
+          auto kv //! 対象のKeyFrameについて<FrameID, [KeyPoint List]>のMap
               = obs_to_lin.find(
               obs_tcid_vec[r] //! LMをHostしているKeyFrameのID
               );
 
           //! r番目のKeyFrameについての情報を保存するためのコンテナへの参照
-          RelLinData& rld = rld_vec[r];
+          RelLinData& rld = rld_vec[r]; // RelLinDataはFrameごとに計算される
 
           rld.error = 0;
 
+          //! 基準Frame, obs_tcid_vec[r]の参照するFrameになる
+          //! tcid_h(host)
           const TimeCamId& tcid_h = kv->first;
 
-          for (const auto& obs_kv : kv->second) {
+          for (const auto& obs_kv :
+               //! <観測したFrame, [KeyPoints list]>のMap
+               kv->second
+               ) {
+            //! tcid_hでHostしているLMを観測したFrame
+            //! tcid_t(target)
             const TimeCamId& tcid_t = obs_kv.first;
             if (tcid_h != tcid_t) {
+              //! Target frameとHost frameが違う場合
               // target and host are not the same
+
+              //! Host frameの`RelLinData`に <host frame id, target frame id>のペアを追加
               rld.order.emplace_back(std::make_pair(tcid_h, tcid_t));
 
+              //! 初めにPoseDBから、見つからなければStateDB(Velocity, IMU biasなど含まれる)からFrameStateを探索する。
+              //! もしどちらにもなければstd::abort
+              /**
+               * @brief Core of `PoseStateWithLin`
+               * @details
+               * ``` c++
+               *    bool linearized;
+                    VecN delta; // 線形化系
+                    PoseState pose_linearized; // 線形化系
+                    Sophus::SE3d T_w_i_current; // IMU to World のPose
+                 ```
+               *
+               */
               PoseStateWithLin state_h = getPoseStateWithLin(tcid_h.frame_id);
               PoseStateWithLin state_t = getPoseStateWithLin(tcid_t.frame_id);
 
               Sophus::Matrix6d d_rel_d_h, d_rel_d_t;
 
               Sophus::SE3d T_t_h_sophus = computeRelPose(
-                  state_h.getPoseLin(), calib.T_i_c[tcid_h.cam_id],
-                  state_t.getPoseLin(), calib.T_i_c[tcid_t.cam_id], &d_rel_d_h,
+                  state_h.getPoseLin(),
+                  calib.T_i_c[tcid_h.cam_id],
+                  state_t.getPoseLin(),
+                  calib.T_i_c[tcid_t.cam_id],
+                  &d_rel_d_h,
                   &d_rel_d_t);
 
               rld.d_rel_d_h.emplace_back(d_rel_d_h);
