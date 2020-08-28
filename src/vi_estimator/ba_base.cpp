@@ -45,9 +45,9 @@ namespace basalt {
  * @param T_i_c_h : Camera to IMU, Host Frame
  * @param T_w_i_t : IMU to World, Target Frame
  * @param T_i_c_t : Camera to IMU, Target Frame
- * @param d_rel_d_h
- * @param d_rel_d_t
- * @return
+ * @param d_rel_d_h : Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w] @todo 式の意味を明らかにする
+ * @param d_rel_d_t : -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w] @todo 式の意味を明らかにする
+ * @return T_c_t_c_h : Camera,host to Camera,target
  */
 Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
                                                   const Sophus::SE3d& T_i_c_h,
@@ -66,25 +66,25 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
   Sophus::SE3d res = tmp * T_i_c_h; // Camera,host to Camera,target
 
   if (d_rel_d_h) {
-    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix(); // World to IMU
+    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix(); // World to IMU,host
 
     Sophus::Matrix6d RR;
     RR.setZero();
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
-    *d_rel_d_h = tmp.Adj() * RR;
+    *d_rel_d_h = tmp.Adj() * RR; // Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w]
   }
 
   if (d_rel_d_t) {
-    Eigen::Matrix3d R = T_w_i_t.so3().inverse().matrix();
+    Eigen::Matrix3d R = T_w_i_t.so3().inverse().matrix();// World to IMU,target
 
     Sophus::Matrix6d RR;
     RR.setZero();
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
-    *d_rel_d_t = -tmp2.Adj() * RR;
+    *d_rel_d_t = -tmp2.Adj() * RR; // -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w]
   }
 
   return res;
@@ -236,6 +236,12 @@ void BundleAdjustmentBase::computeError(
   }
 }
 
+/**
+ * @berif 何かしらの線形化、つまりJacobianかHessianを計算するのだろうが、具体的な計算過程、意味は不明
+ * @param rld_vec : 線形化結果の出力
+ * @param obs_to_lin : 線形化を実施するランドマークの観測状況
+ * @param error : おそらく線形化誤差かなにかがリターンされるはず
+ */
 void BundleAdjustmentBase::linearizeHelper(
     Eigen::aligned_vector<RelLinData>& rld_vec,
     const Eigen::aligned_map<
@@ -305,8 +311,11 @@ void BundleAdjustmentBase::linearizeHelper(
               PoseStateWithLin state_h = getPoseStateWithLin(tcid_h.frame_id);
               PoseStateWithLin state_t = getPoseStateWithLin(tcid_t.frame_id);
 
-              Sophus::Matrix6d d_rel_d_h, d_rel_d_t;
+              Sophus::Matrix6d
+                  d_rel_d_h //! Adj(T_c_t_i_h) diag(R_i_h_w, R_i_h_w)
+                  ,d_rel_d_t; //! -Adj(T_c_t_i_t) diag(R_i_t_w, R_i_t_w)
 
+              //! T_t_h_sophus : Camera,host to Camera,target
               Sophus::SE3d T_t_h_sophus = computeRelPose(
                   state_h.getPoseLin(),
                   calib.T_i_c[tcid_h.cam_id],
@@ -315,6 +324,8 @@ void BundleAdjustmentBase::linearizeHelper(
                   &d_rel_d_h,
                   &d_rel_d_t);
 
+              //! computeRelPoseでの計算結果をrld(rld_vecにおける今回のカメラ分)を追加
+              //! Poseに関する情報のはず、微分すると出現するT~なんちゃらだとは思うが…
               rld.d_rel_d_h.emplace_back(d_rel_d_h);
               rld.d_rel_d_t.emplace_back(d_rel_d_t);
 
@@ -324,25 +335,39 @@ void BundleAdjustmentBase::linearizeHelper(
                     state_t.getPose(), calib.T_i_c[tcid_t.cam_id]);
               }
 
-              Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix();
+              Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix(); //! Camera,host to Cmaera,target
 
               FrameRelLinData frld;
 
+              //! CameraModelごとの処理の分岐がここでstd::variantとstd::visitを使って実装されている。
               std::visit(
                   [&](const auto& cam) {
                     for (size_t i = 0; i < obs_kv.second.size(); i++) {
-                      const KeypointObservation& kpt_obs = obs_kv.second[i];
+                      //! <観測したFrame, [KeyPoints list]>のPair
+                      //! obs_kv.first : TargetFrame
+                      //! obs_kv.second : TargetFrameが観測したKeyPointのList
+
+                      const KeypointObservation& kpt_obs = obs_kv.second[i]; //! TargetFrameが観測したi番目のKeyPoint
                       const KeypointPosition& kpt_pos =
-                          lmdb.getLandmark(kpt_obs.kpt_id);
+                          lmdb.getLandmark(kpt_obs.kpt_id); //! KeyPoint i の位置で、おそらくHost座標系になっているはず
 
                       Eigen::Vector2d res;
-                      Eigen::Matrix<double, 2, POSE_SIZE> d_res_d_xi;
-                      Eigen::Matrix<double, 2, 3> d_res_d_p;
+                      Eigen::Matrix<double, 2, POSE_SIZE> d_res_d_xi; //! Reprojection error と pose i(x_i)のJacobian
+                      Eigen::Matrix<double, 2, 3> d_res_d_p; //! Reprojection errorとKeyPoint位置のJacobian
 
-                      bool valid = linearizePoint(kpt_obs, kpt_pos, T_t_h, cam,
-                                                  res, &d_res_d_xi, &d_res_d_p);
+                      //! KeyPoint i に関するJacobianを計算する
+                      bool valid = linearizePoint(kpt_obs, //! Keypoint i の観測情報
+                                                  kpt_pos, //! Keypoint i の位置
+                                                  T_t_h, //! Camera,host to Camera,target
+                                                  cam, //! カメラモデル、カメラパラメータ
+                                                  res, //! Residual, Reprojeciton error
+                                                  &d_res_d_xi, //! Reprojection error と pose i(x_i)のJacobian
+                                                  &d_res_d_p //! Reprojection errorとKeyPoint位置のJacobian
+                                                  );
 
-                      if (valid) {
+                      if (valid) { //! Invalid projectionとかが発生しなければ？？？
+
+                        //! KeyPointについてロバスト化？したコスト関数適用？Weightを計算
                         double e = res.norm();
                         double huber_weight =
                             e < huber_thresh ? 1.0 : huber_thresh / e;
@@ -352,11 +377,14 @@ void BundleAdjustmentBase::linearizeHelper(
                         rld.error += (2 - huber_weight) * obs_weight *
                                      res.transpose() * res;
 
+
+                        //! クリアされていなければHessianとbをzeroクリアする
                         if (rld.Hll.count(kpt_obs.kpt_id) == 0) {
                           rld.Hll[kpt_obs.kpt_id].setZero();
                           rld.bl[kpt_obs.kpt_id].setZero();
                         }
 
+                        //!
                         rld.Hll[kpt_obs.kpt_id] +=
                             obs_weight * d_res_d_p.transpose() * d_res_d_p;
                         rld.bl[kpt_obs.kpt_id] +=
