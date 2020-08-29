@@ -40,13 +40,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace basalt {
 
 /**
- * @brief
+ * @brief Poseに関する相対的な何らかの変換を行う。 @todo
+ * ここでの計算がどういった意味を持つのか明らかにする
  * @param T_w_i_h : IMU to World, Host Frame
  * @param T_i_c_h : Camera to IMU, Host Frame
  * @param T_w_i_t : IMU to World, Target Frame
  * @param T_i_c_t : Camera to IMU, Target Frame
- * @param d_rel_d_h : Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w] @todo 式の意味を明らかにする
- * @param d_rel_d_t : -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w] @todo 式の意味を明らかにする
+ * @param d_rel_d_h : Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w] @todo
+ * 式の意味を明らかにする
+ * @param d_rel_d_t : -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w] @todo
+ * 式の意味を明らかにする
  * @return T_c_t_c_h : Camera,host to Camera,target
  */
 Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
@@ -55,39 +58,49 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
                                                   const Sophus::SE3d& T_i_c_t,
                                                   Sophus::Matrix6d* d_rel_d_h,
                                                   Sophus::Matrix6d* d_rel_d_t) {
-  Sophus::SE3d tmp2 = (T_i_c_t).inverse(); // Camera to IMU, Target Frame
+  //! Camera to IMU, Target Frame
+  Sophus::SE3d tmp2 = (T_i_c_t).inverse();
 
-  Sophus::SE3d T_t_i_h_i; //Transformation : IMU,host to IMU,target
+  //! Transformation : IMU,host to IMU,target
+  Sophus::SE3d T_t_i_h_i;
   T_t_i_h_i.so3() = T_w_i_t.so3().inverse() * T_w_i_h.so3();
   T_t_i_h_i.translation() =
       T_w_i_t.so3().inverse() * (T_w_i_h.translation() - T_w_i_t.translation());
 
-  Sophus::SE3d tmp = tmp2 * T_t_i_h_i; // IMU,host to Camera,target
-  Sophus::SE3d res = tmp * T_i_c_h; // Camera,host to Camera,target
+  //! IMU,host to Camera,target
+  Sophus::SE3d tmp = tmp2 * T_t_i_h_i;
+  //! Camera,host to Camera,target
+  Sophus::SE3d res = tmp * T_i_c_h;
 
   if (d_rel_d_h) {
-    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix(); // World to IMU,host
+    //! World to IMU,host
+    Eigen::Matrix3d R = T_w_i_h.so3().inverse().matrix();
 
     Sophus::Matrix6d RR;
     RR.setZero();
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
-    *d_rel_d_h = tmp.Adj() * RR; // Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w]
+    //! Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w]
+    *d_rel_d_h = tmp.Adj() * RR;
   }
 
   if (d_rel_d_t) {
-    Eigen::Matrix3d R = T_w_i_t.so3().inverse().matrix();// World to IMU,target
+    //! World to IMU,target
+    Eigen::Matrix3d R = T_w_i_t.so3().inverse().matrix();
 
     Sophus::Matrix6d RR;
     RR.setZero();
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
-    *d_rel_d_t = -tmp2.Adj() * RR; // -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w]
+    //! -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w]
+    *d_rel_d_t = -tmp2.Adj() * RR;
   }
 
   return res;
+
+  //@}
 }
 
 void BundleAdjustmentBase::updatePoints(const AbsOrderMap& aom,
@@ -237,7 +250,8 @@ void BundleAdjustmentBase::computeError(
 }
 
 /**
- * @berif 何かしらの線形化、つまりJacobianかHessianを計算するのだろうが、具体的な計算過程、意味は不明
+ * @berif
+ * 何かしらの線形化、つまりJacobianかHessianを計算するのだろうが、具体的な計算過程、意味は不明
  * @param rld_vec : 線形化結果の出力
  * @param obs_to_lin : 線形化を実施するランドマークの観測状況
  * @param error : おそらく線形化誤差かなにかがリターンされるはず
@@ -255,25 +269,30 @@ void BundleAdjustmentBase::linearizeHelper(
 
   std::vector<TimeCamId> obs_tcid_vec;
   for (const auto& kv : obs_to_lin) {
-    //! kv.first : KeyPointを保持しているKeyFrameのFrameID
-    obs_tcid_vec.emplace_back(kv.first);
-    //! kv.second : kv.firstで初めて観測したLMをもう一度観測したFrameID（おろそらく自分も含む）と、観測KeyPoint位置のリストのMap
-    rld_vec.emplace_back(lmdb.numLandmarks(), //! Sliding windowに入っているLandmarkの数
-                         kv.second.size() //! 自分も含めてHostしているKeyPointのどれか一つでも観測された回数（Poseの個数）
-                         );
+    obs_tcid_vec.emplace_back(
+        //! kv.first : KeyPointを保持しているKeyFrameのFrameID
+        kv.first);
+
+    rld_vec.emplace_back(
+        //! Sliding windowに入っているLandmarkの数
+        lmdb.numLandmarks(),
+        //! 自分も含めてHostしているKeyPointのどれか一つでも観測された回数（Poseの個数）
+        //! kv.second :
+        //! kv.firstで初めて観測したLMをもう一度観測したFrameID（おろそらく自分も含む）と、観測KeyPoint位置のリストのMap
+        kv.second.size());
   }
 
   tbb::parallel_for(
       tbb::blocked_range<size_t>(0, obs_tcid_vec.size()),
       [&](const tbb::blocked_range<size_t>& range) {
         for (size_t r = range.begin(); r != range.end(); ++r) {
-          auto kv //! 対象のKeyFrameについて<FrameID, [KeyPoint List]>のMap
-              = obs_to_lin.find(
-              obs_tcid_vec[r] //! LMをHostしているKeyFrameのID
-              );
+          //! 対象のKeyFrameについて<FrameID, [KeyPoint List]>のMap
+          auto kv = obs_to_lin.find(
+              //! LMをHostしているKeyFrameのID
+              obs_tcid_vec[r]);
 
           //! r番目のKeyFrameについての情報を保存するためのコンテナへの参照
-          RelLinData& rld = rld_vec[r]; // RelLinDataはFrameごとに計算される
+          RelLinData& rld = rld_vec[r];  // RelLinDataはFrameごとに計算される
 
           rld.error = 0;
 
@@ -283,8 +302,7 @@ void BundleAdjustmentBase::linearizeHelper(
 
           for (const auto& obs_kv :
                //! <観測したFrame, [KeyPoints list]>のMap
-               kv->second
-               ) {
+               kv->second) {
             //! tcid_hでHostしているLMを観測したFrame
             //! tcid_t(target)
             const TimeCamId& tcid_t = obs_kv.first;
@@ -292,10 +310,12 @@ void BundleAdjustmentBase::linearizeHelper(
               //! Target frameとHost frameが違う場合
               // target and host are not the same
 
-              //! Host frameの`RelLinData`に <host frame id, target frame id>のペアを追加
+              //! Host frameの`RelLinData`に <host frame id, target frame
+              //! id>のペアを追加
               rld.order.emplace_back(std::make_pair(tcid_h, tcid_t));
 
-              //! 初めにPoseDBから、見つからなければStateDB(Velocity, IMU biasなど含まれる)からFrameStateを探索する。
+              //! 初めにPoseDBから、見つからなければStateDB(Velocity, IMU
+              //! biasなど含まれる)からFrameStateを探索する。
               //! もしどちらにもなければstd::abort
               /**
                * @brief Core of `PoseStateWithLin`
@@ -308,20 +328,20 @@ void BundleAdjustmentBase::linearizeHelper(
                  ```
                *
                */
+              //! Host Frameの状態
               PoseStateWithLin state_h = getPoseStateWithLin(tcid_h.frame_id);
+              //! Target Frameの状態
               PoseStateWithLin state_t = getPoseStateWithLin(tcid_t.frame_id);
 
-              Sophus::Matrix6d
-                  d_rel_d_h //! Adj(T_c_t_i_h) diag(R_i_h_w, R_i_h_w)
-                  ,d_rel_d_t; //! -Adj(T_c_t_i_t) diag(R_i_t_w, R_i_t_w)
+              //! Adj(T_c_t_i_h) diag(R_i_h_w, R_i_h_w)
+              Sophus::Matrix6d d_rel_d_h;
+              //! -Adj(T_c_t_i_t) diag(R_i_t_w, R_i_t_w)
+              Sophus::Matrix6d d_rel_d_t;
 
-              //! T_t_h_sophus : Camera,host to Camera,target
+              //! Transformation for Camera,host to Camera,target
               Sophus::SE3d T_t_h_sophus = computeRelPose(
-                  state_h.getPoseLin(),
-                  calib.T_i_c[tcid_h.cam_id],
-                  state_t.getPoseLin(),
-                  calib.T_i_c[tcid_t.cam_id],
-                  &d_rel_d_h,
+                  state_h.getPoseLin(), calib.T_i_c[tcid_h.cam_id],
+                  state_t.getPoseLin(), calib.T_i_c[tcid_t.cam_id], &d_rel_d_h,
                   &d_rel_d_t);
 
               //! computeRelPoseでの計算結果をrld(rld_vecにおける今回のカメラ分)を追加
@@ -335,8 +355,12 @@ void BundleAdjustmentBase::linearizeHelper(
                     state_t.getPose(), calib.T_i_c[tcid_t.cam_id]);
               }
 
-              Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix(); //! Camera,host to Cmaera,target
+              //! Transformation for Camera,host to Cmaera,target
+              Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix();
 
+
+              //! HostFrameで観測されているLandmarkとTargetFrameに関する、
+              //! Landmark to TargetFramePose, TargetFramePose to TargetFramePoseのHessianとGradientを保持する
               FrameRelLinData frld;
 
               //! CameraModelごとの処理の分岐がここでstd::variantとstd::visitを使って実装されている。
@@ -347,25 +371,35 @@ void BundleAdjustmentBase::linearizeHelper(
                       //! obs_kv.first : TargetFrame
                       //! obs_kv.second : TargetFrameが観測したKeyPointのList
 
-                      const KeypointObservation& kpt_obs = obs_kv.second[i]; //! TargetFrameが観測したi番目のKeyPoint
+                      //! TargetFrameが観測したi番目のKeyPoint
+                      const KeypointObservation& kpt_obs = obs_kv.second[i];
+                      //! KeyPoint i
+                      //! の位置で、おそらくHost座標系になっているはず
                       const KeypointPosition& kpt_pos =
-                          lmdb.getLandmark(kpt_obs.kpt_id); //! KeyPoint i の位置で、おそらくHost座標系になっているはず
+                          lmdb.getLandmark(kpt_obs.kpt_id);
 
+                      //! Residual, Reprojeciton error
                       Eigen::Vector2d res;
-                      Eigen::Matrix<double, 2, POSE_SIZE> d_res_d_xi; //! Reprojection error と pose i(x_i)のJacobian
-                      Eigen::Matrix<double, 2, 3> d_res_d_p; //! Reprojection errorとKeyPoint位置のJacobian
+                      //! Reprojection error と pose i(x_i)のJacobian
+                      Eigen::Matrix<double, 2, POSE_SIZE> d_res_d_xi;
+                      //! Reprojection errorとKeyPoint位置のJacobian
+                      Eigen::Matrix<double, 2, 3> d_res_d_p;
 
                       //! KeyPoint i に関するJacobianを計算する
-                      bool valid = linearizePoint(kpt_obs, //! Keypoint i の観測情報
-                                                  kpt_pos, //! Keypoint i の位置
-                                                  T_t_h, //! Camera,host to Camera,target
-                                                  cam, //! カメラモデル、カメラパラメータ
-                                                  res, //! Residual, Reprojeciton error
-                                                  &d_res_d_xi, //! Reprojection error と pose i(x_i)のJacobian
-                                                  &d_res_d_p //! Reprojection errorとKeyPoint位置のJacobian
-                                                  );
+                      bool valid = linearizePoint(
+                          kpt_obs,  //! Keypoint i の観測情報
+                          kpt_pos,  //! Keypoint i の位置
+                          T_t_h,    //! Camera,host to Camera,target
+                          cam,  //! カメラモデル、カメラパラメータ
+                          res,          //! Residual, Reprojeciton error
+                          &d_res_d_xi,  //! Reprojection error と pose
+                                        //! i(x_i)のJacobian
+                          &d_res_d_p    //! Reprojection
+                                        //! errorとKeyPoint位置のJacobian
+                      );
 
-                      if (valid) { //! Invalid projectionとかが発生しなければ？？？
+                      if (valid) {  //! Invalid
+                                    //! projectionとかが発生しなければ？？？
 
                         //! KeyPointについてロバスト化？したコスト関数適用？Weightを計算
                         double e = res.norm();
@@ -378,32 +412,72 @@ void BundleAdjustmentBase::linearizeHelper(
                                      res.transpose() * res;
 
 
+
                         //! クリアされていなければHessianとbをzeroクリアする
                         if (rld.Hll.count(kpt_obs.kpt_id) == 0) {
                           rld.Hll[kpt_obs.kpt_id].setZero();
                           rld.bl[kpt_obs.kpt_id].setZero();
                         }
 
-                        //!
+                        //! rld : HostFrameごと
+                        //! frld : HostFrameごと
+
+                        //! Landmark to Landmark のHessian(Hll)を計算
                         rld.Hll[kpt_obs.kpt_id] +=
                             obs_weight * d_res_d_p.transpose() * d_res_d_p;
+                        //! Landmark部分のGradient(bl)を計算
                         rld.bl[kpt_obs.kpt_id] +=
                             obs_weight * d_res_d_p.transpose() * res;
 
+                        //! FrameRelLinDataはConstructorでメンバがZeroクリアされるので、rldのように初期化は不要
+                        //! Pose to Pose のHessianに加算？
                         frld.Hpp +=
                             obs_weight * d_res_d_xi.transpose() * d_res_d_xi;
+                        //! Pose部分のGradientに加算？
                         frld.bp += obs_weight * d_res_d_xi.transpose() * res;
+                        //! Pose to LandmarkのHessian(Hpl)に加算
                         frld.Hpl.emplace_back(
                             obs_weight * d_res_d_xi.transpose() * d_res_d_p);
+                        //! Pose to LandmarkのHessianとLandmark idの対応をとるためIDをvectorに保存？
                         frld.lm_id.emplace_back(kpt_obs.kpt_id);
 
+                        //! Keypoint ID, [<Hpplにおける今回のTargetFrameのIndex, Hppl(frld)におけるLMのIndex>]のマップを追加する
+                        //! これによって、Keypoint IDから、Hpplに保存されているHpp, bp, Hplにアクセスできる。
+                        //! Hppl[rld.lm_to_obs[Keypoint ID].first].Hpl[rld.lm_to_obs[Keypoint ID].second]のような使い方になるはず。
                         rld.lm_to_obs[kpt_obs.kpt_id].emplace_back(
-                            rld.Hpppl.size(), frld.lm_id.size() - 1);
+                            //! HsotFrameにおける今回のTargetFrameのIndex
+                            rld.Hpppl.size(),
+                            //! 今回のTargetFrameにおける`kpt_obs.kpt_id`のLMのIndex
+                            frld.lm_id.size() - 1);
+
                       }
                     }
                   },
                   calib.intrinsics[tcid_t.cam_id].variant);
 
+
+              /**
+               * @brief まとめると…
+               * @details
+               * - rld : HostFrameに紐づく
+               * - frld : HostFrame, TargetFrameの組み合わせに紐づく
+               *
+               * - rld::error : WeightをかけたReprojection errorをTargetFrameで観測したLM文すべて加算
+               * - rld::Hll : HostFrame ID, Keypoint IDの組み合わせ, TargetFrameごとにHessianを計算、Keypoint IDごとに計算結果を加算
+               * - rld::bl : HostFrame ID, Keypoint IDの組み合わせ, TargetFrameごとにGradientを計算、Keypoint IDごとに計算結果を加算
+               * - frld::Hpp : HostFrame ID, TargetFrame IDの組み合わせ, Host,TargetのIntersectionLMについてJacobian全てを加算
+               * - frld::bp : HostFrame ID, TargetFrame IDの組み合わせ, Host,TargetのIntersectionLMについてJacobian全てを加算
+               * - frld::Hpl : HostFrame ID, TargetFrame ID, Keypoint IDの組わせでスタックされる
+               */
+
+              /**
+               * @brief　あとやること
+               * @todo HostFrameの座標系で計算しているはず、式としてどういった形になっているか明らかにする
+               * @todo Hessian関係で加算処理が見られる。ここが J^T @ J = H の計算とどういったように対応しているか明らかにする
+               * @todo ここでの計算について計算式として書き下す
+               */
+
+              //! rldにPose to Pose, Pose to Landmarkの情報を追加
               rld.Hpppl.emplace_back(frld);
 
             } else {
