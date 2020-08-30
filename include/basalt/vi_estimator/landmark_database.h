@@ -40,8 +40,13 @@ namespace basalt {
 
 // keypoint position defined relative to some frame
 struct KeypointPosition {
+
+  //! keyFrame ID
   TimeCamId kf_id;
+
+  //! Direction to the Landmark position
   Eigen::Vector2d dir;
+  //! Inverse depth, 多分…
   double id;
 
   inline void backup() {

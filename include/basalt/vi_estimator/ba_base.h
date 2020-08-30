@@ -117,13 +117,30 @@ class BundleAdjustmentBase {
 
   void filterOutliers(double outlier_threshold, int min_num_obs);
 
+  /**
+   * @brief HostFrameの座標系でReprojectionErrorに関するJacobianを計算する
+   * @tparam CamT : カメラモデル、この関数はstd::visitorを通じで呼ばれる。
+   * @param kpt_obs : KeyPointの観測情報、座標座標系
+   * @param kpt_pos : KeyPointの３次元位置、HostFrame位置
+   * @param T_t_h : Transformation for Camera,host to Camera,target
+   * @param cam : カメラモデル、パラメータ
+   * @param[out] res : Reprojection error
+   * @param[out] d_res_d_xi : Reprojection errorについて Camera poseに関するJacobian
+   * @param[out] d_res_d_p : Reprojection errorについて Landmark positionに関するJacobian
+   * @param proj : ??
+   * @return
+   */
   template <class CamT>
   static bool linearizePoint(
-      const KeypointObservation& kpt_obs, const KeypointPosition& kpt_pos,
-      const Eigen::Matrix4d& T_t_h, const CamT& cam, Eigen::Vector2d& res,
+      const KeypointObservation& kpt_obs,
+      const KeypointPosition& kpt_pos,
+      const Eigen::Matrix4d& T_t_h,
+      const CamT& cam,
+      Eigen::Vector2d& res,
       Eigen::Matrix<double, 2, POSE_SIZE>* d_res_d_xi = nullptr,
       Eigen::Matrix<double, 2, 3>* d_res_d_p = nullptr,
-      Eigen::Vector4d* proj = nullptr) {
+      Eigen::Vector4d* proj = nullptr
+      ) {
     // Todo implement without jacobians
     Eigen::Matrix<double, 4, 2> Jup;
     Eigen::Vector4d p_h_3d;
