@@ -52,12 +52,12 @@ namespace basalt {
  * 式の意味を明らかにする
  * @return T_c_t_c_h : Camera,host to Camera,target
  */
-Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
-                                                  const Sophus::SE3d& T_i_c_h,
-                                                  const Sophus::SE3d& T_w_i_t,
-                                                  const Sophus::SE3d& T_i_c_t,
-                                                  Sophus::Matrix6d* d_rel_d_h,
-                                                  Sophus::Matrix6d* d_rel_d_t) {
+Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
+                                                  const Sophus::SE3d &T_i_c_h,
+                                                  const Sophus::SE3d &T_w_i_t,
+                                                  const Sophus::SE3d &T_i_c_t,
+                                                  Sophus::Matrix6d *d_rel_d_h,
+                                                  Sophus::Matrix6d *d_rel_d_t) {
   //! Camera to IMU, Target Frame
   Sophus::SE3d tmp2 = (T_i_c_t).inverse();
 
@@ -103,14 +103,14 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d& T_w_i_h,
   //@}
 }
 
-void BundleAdjustmentBase::updatePoints(const AbsOrderMap& aom,
-                                        const RelLinData& rld,
-                                        const Eigen::VectorXd& inc) {
+void BundleAdjustmentBase::updatePoints(const AbsOrderMap &aom,
+                                        const RelLinData &rld,
+                                        const Eigen::VectorXd &inc) {
   Eigen::VectorXd rel_inc;
   rel_inc.setZero(rld.order.size() * POSE_SIZE);
   for (size_t i = 0; i < rld.order.size(); i++) {
-    const TimeCamId& tcid_h = rld.order[i].first;
-    const TimeCamId& tcid_t = rld.order[i].second;
+    const TimeCamId &tcid_h = rld.order[i].first;
+    const TimeCamId &tcid_t = rld.order[i].second;
 
     if (tcid_h.frame_id != tcid_t.frame_id) {
       int abs_h_idx = aom.abs_order_map.at(tcid_h.frame_id).first;
@@ -118,20 +118,20 @@ void BundleAdjustmentBase::updatePoints(const AbsOrderMap& aom,
 
       rel_inc.segment<POSE_SIZE>(i * POSE_SIZE) =
           rld.d_rel_d_h[i] * inc.segment<POSE_SIZE>(abs_h_idx) +
-          rld.d_rel_d_t[i] * inc.segment<POSE_SIZE>(abs_t_idx);
+              rld.d_rel_d_t[i] * inc.segment<POSE_SIZE>(abs_t_idx);
     }
   }
 
-  for (const auto& kv : rld.lm_to_obs) {
+  for (const auto &kv : rld.lm_to_obs) {
     int lm_idx = kv.first;
-    const auto& other_obs = kv.second;
+    const auto &other_obs = kv.second;
 
     Eigen::Vector3d H_l_p_x;
     H_l_p_x.setZero();
 
     for (size_t k = 0; k < other_obs.size(); k++) {
       int rel_idx = other_obs[k].first;
-      const FrameRelLinData& frld_other = rld.Hpppl.at(rel_idx);
+      const FrameRelLinData &frld_other = rld.Hpppl.at(rel_idx);
 
       Eigen::Matrix<double, 3, POSE_SIZE> H_l_p_other =
           frld_other.Hpl[other_obs[k].second].transpose();
@@ -143,7 +143,7 @@ void BundleAdjustmentBase::updatePoints(const AbsOrderMap& aom,
 
     Eigen::Vector3d inc_p = rld.Hll.at(lm_idx) * (rld.bl.at(lm_idx) - H_l_p_x);
 
-    KeypointPosition& kpt = lmdb.getLandmark(lm_idx);
+    KeypointPosition &kpt = lmdb.getLandmark(lm_idx);
     kpt.dir -= inc_p.head<2>();
     kpt.id -= inc_p[2];
 
@@ -152,16 +152,16 @@ void BundleAdjustmentBase::updatePoints(const AbsOrderMap& aom,
 }
 
 void BundleAdjustmentBase::computeError(
-    double& error,
-    std::map<int, std::vector<std::pair<TimeCamId, double>>>* outliers,
+    double &error,
+    std::map<int, std::vector<std::pair<TimeCamId, double>>> *outliers,
     double outlier_threshold) const {
   error = 0;
 
-  for (const auto& kv : lmdb.getObservations()) {
-    const TimeCamId& tcid_h = kv.first;
+  for (const auto &kv : lmdb.getObservations()) {
+    const TimeCamId &tcid_h = kv.first;
 
-    for (const auto& obs_kv : kv.second) {
-      const TimeCamId& tcid_t = obs_kv.first;
+    for (const auto &obs_kv : kv.second) {
+      const TimeCamId &tcid_t = obs_kv.first;
 
       if (tcid_h != tcid_t) {
         PoseStateWithLin state_h = getPoseStateWithLin(tcid_h.frame_id);
@@ -174,10 +174,10 @@ void BundleAdjustmentBase::computeError(
         Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix();
 
         std::visit(
-            [&](const auto& cam) {
+            [&](const auto &cam) {
               for (size_t i = 0; i < obs_kv.second.size(); i++) {
-                const KeypointObservation& kpt_obs = obs_kv.second[i];
-                const KeypointPosition& kpt_pos =
+                const KeypointObservation &kpt_obs = obs_kv.second[i];
+                const KeypointPosition &kpt_pos =
                     lmdb.getLandmark(kpt_obs.kpt_id);
 
                 Eigen::Vector2d res;
@@ -213,10 +213,10 @@ void BundleAdjustmentBase::computeError(
         // it just depends on the point
 
         std::visit(
-            [&](const auto& cam) {
+            [&](const auto &cam) {
               for (size_t i = 0; i < obs_kv.second.size(); i++) {
-                const KeypointObservation& kpt_obs = obs_kv.second[i];
-                const KeypointPosition& kpt_pos =
+                const KeypointObservation &kpt_obs = obs_kv.second[i];
+                const KeypointPosition &kpt_pos =
                     lmdb.getLandmark(kpt_obs.kpt_id);
 
                 Eigen::Vector2d res;
@@ -257,58 +257,67 @@ void BundleAdjustmentBase::computeError(
  * @param error : おそらく線形化誤差かなにかがリターンされるはず
  */
 void BundleAdjustmentBase::linearizeHelper(
-    Eigen::aligned_vector<RelLinData>& rld_vec,
-    const Eigen::aligned_map<
-        TimeCamId, Eigen::aligned_map<
-                       TimeCamId, Eigen::aligned_vector<KeypointObservation>>>&
-        obs_to_lin,
-    double& error) const {
+    Eigen::aligned_vector<RelLinData> &rld_vec,
+    const Eigen::aligned_map<TimeCamId,
+                             Eigen::aligned_map<TimeCamId,
+                                                Eigen::aligned_vector<KeypointObservation>
+                             >
+                             > &obs_to_lin,
+    double &error
+) const {
   error = 0;
 
   rld_vec.clear();
 
+  // HostFrameのFrameIDが保存されている。
+  // obs_to_linの i 番目のKey(HostFrame)は、osb_tcid_vec[i]で参照できる。
   std::vector<TimeCamId> obs_tcid_vec;
-  for (const auto& kv : obs_to_lin) {
+  for (const auto &kv : obs_to_lin) {
     obs_tcid_vec.emplace_back(
-        //! kv.first : KeyPointを保持しているKeyFrameのFrameID
+        //! kv.first : KeyPointを保持しているKeyFrame(HostFrame)のFrameID
         kv.first);
 
     rld_vec.emplace_back(
         //! Sliding windowに入っているLandmarkの数
         lmdb.numLandmarks(),
         //! 自分も含めてHostしているKeyPointのどれか一つでも観測された回数（Poseの個数）
-        //! kv.second :
-        //! kv.firstで初めて観測したLMをもう一度観測したFrameID（おろそらく自分も含む）と、観測KeyPoint位置のリストのMap
+        //! kv.second : kv.firstで初めて観測したLMをもう一度観測したFrameID（自分も含む）と、観測KeyPoint位置のリストのMap
         kv.second.size());
-  }
+  }obs_tcid_vec
 
   tbb::parallel_for(
       tbb::blocked_range<size_t>(0, obs_tcid_vec.size()),
-      [&](const tbb::blocked_range<size_t>& range) {
+      [&](const tbb::blocked_range<size_t> &range) {
+
+        //! HostFrameのLoop
         for (size_t r = range.begin(); r != range.end(); ++r) {
+
           //! 対象のKeyFrameについて<FrameID, [KeyPoint List]>のMap
           auto kv = obs_to_lin.find(
               //! LMをHostしているKeyFrameのID
               obs_tcid_vec[r]);
 
           //! r番目のKeyFrameについての情報を保存するためのコンテナへの参照
-          RelLinData& rld = rld_vec[r];  // RelLinDataはFrameごとに計算される
+          RelLinData &rld = rld_vec[r];  // RelLinDataはFrameごとに計算される
 
           rld.error = 0;
 
           //! 基準Frame, obs_tcid_vec[r]の参照するFrameになる
           //! tcid_h(host)
-          const TimeCamId& tcid_h = kv->first;
+          const TimeCamId &tcid_h = kv->first;
 
-          for (const auto& obs_kv :
-               //! <観測したFrame, [KeyPoints list]>のMap
-               kv->second) {
+          //! TargetFrameのLoop
+          for (const auto &obs_kv :
+            //! <観測したFrame, [KeyPoints list]>のMap
+              kv->second) {
+
             //! tcid_hでHostしているLMを観測したFrame
             //! tcid_t(target)
-            const TimeCamId& tcid_t = obs_kv.first;
+            const TimeCamId &tcid_t = obs_kv.first;
+
+            //! Target frameとHost frameが違う場合
+            // target and host are not the same
             if (tcid_h != tcid_t) {
-              //! Target frameとHost frameが違う場合
-              // target and host are not the same
 
               //! Host frameの`RelLinData`に <host frame id, target frame
               //! id>のペアを追加
@@ -358,24 +367,24 @@ void BundleAdjustmentBase::linearizeHelper(
               //! Transformation for Camera,host to Cmaera,target
               Eigen::Matrix4d T_t_h = T_t_h_sophus.matrix();
 
-
-              //! HostFrameで観測されているLandmarkとTargetFrameに関する、
-              //! Landmark to TargetFramePose, TargetFramePose to TargetFramePoseのHessianとGradientを保持する
+              //! HostFrameで観測されているLandmarkとTargetFrameに関する、Landmark to TargetFramePose, TargetFramePose to TargetFramePoseのHessianとGradientを保持する
               FrameRelLinData frld;
 
               //! CameraModelごとの処理の分岐がここでstd::variantとstd::visitを使って実装されている。
               std::visit(
-                  [&](const auto& cam) {
+                  [&](const auto &cam) {
+
+                    //! TargetFrameで観測されているLMのLoop
                     for (size_t i = 0; i < obs_kv.second.size(); i++) {
                       //! <観測したFrame, [KeyPoints list]>のPair
                       //! obs_kv.first : TargetFrame
                       //! obs_kv.second : TargetFrameが観測したKeyPointのList
 
                       //! TargetFrameが観測したi番目のKeyPoint
-                      const KeypointObservation& kpt_obs = obs_kv.second[i];
+                      const KeypointObservation &kpt_obs = obs_kv.second[i];
                       //! KeyPoint i
                       //! の位置で、おそらくHost座標系になっているはず
-                      const KeypointPosition& kpt_pos =
+                      const KeypointPosition &kpt_pos =
                           lmdb.getLandmark(kpt_obs.kpt_id);
 
                       //! Residual, Reprojeciton error
@@ -387,19 +396,24 @@ void BundleAdjustmentBase::linearizeHelper(
 
                       //! KeyPoint i に関するJacobianを計算する
                       bool valid = linearizePoint(
-                          kpt_obs,  //! Keypoint i の観測情報
-                          kpt_pos,  //! Keypoint i の位置
-                          T_t_h,    //! Camera,host to Camera,target
-                          cam,  //! カメラモデル、カメラパラメータ
-                          res,          //! Residual, Reprojeciton error
-                          &d_res_d_xi,  //! Reprojection error と pose
-                                        //! i(x_i)のJacobian
-                          &d_res_d_p    //! Reprojection
-                                        //! errorとKeyPoint位置のJacobian
+                          //! Keypoint i の観測情報
+                          kpt_obs,
+                          //! Keypoint i の位置
+                          kpt_pos,
+                          //! Camera,host to Camera,target
+                          T_t_h,
+                          //! カメラモデル、カメラパラメータ
+                          cam,
+                          //! Residual, Reprojeciton error
+                          res,
+                          //! Reprojection error と pose(xiはグザイ、[vx, vy, vz, wx, wy, wz])のJacobian
+                          &d_res_d_xi,
+                          //! Reprojection errorとKeyPoint位置のJacobian
+                          &d_res_d_p
                       );
 
                       if (valid) {  //! Invalid
-                                    //! projectionとかが発生しなければ？？？
+                        //! projectionとかが発生しなければ？？？
 
                         //! KeyPointについてロバスト化？したコスト関数適用？Weightを計算
                         double e = res.norm();
@@ -409,9 +423,7 @@ void BundleAdjustmentBase::linearizeHelper(
                             huber_weight / (obs_std_dev * obs_std_dev);
 
                         rld.error += (2 - huber_weight) * obs_weight *
-                                     res.transpose() * res;
-
-
+                            res.transpose() * res;
 
                         //! クリアされていなければHessianとbをzeroクリアする
                         if (rld.Hll.count(kpt_obs.kpt_id) == 0) {
@@ -436,25 +448,24 @@ void BundleAdjustmentBase::linearizeHelper(
                         //! Pose部分のGradientに加算？
                         frld.bp += obs_weight * d_res_d_xi.transpose() * res;
                         //! Pose to LandmarkのHessian(Hpl)に加算
-                        frld.Hpl.emplace_back(
-                            obs_weight * d_res_d_xi.transpose() * d_res_d_p);
+                        frld.Hpl.emplace_back(obs_weight * d_res_d_xi.transpose() * d_res_d_p);
                         //! Pose to LandmarkのHessianとLandmark idの対応をとるためIDをvectorに保存？
                         frld.lm_id.emplace_back(kpt_obs.kpt_id);
 
                         //! Keypoint ID, [<Hpplにおける今回のTargetFrameのIndex, Hppl(frld)におけるLMのIndex>]のマップを追加する
                         //! これによって、Keypoint IDから、Hpplに保存されているHpp, bp, Hplにアクセスできる。
+                        //! より具体的にいうと、KwyPoint IDから、HpplにおけるTargetFrameのスタックインデックスと、Hppl[stack index].Hplにおける、今回のLMのスタックインデクスがわかる。
+                        //! ここもマップにしても良かったのではないかを個人的に思う。今後の処理で都合がいいのかもしれない。
                         //! Hppl[rld.lm_to_obs[Keypoint ID].first].Hpl[rld.lm_to_obs[Keypoint ID].second]のような使い方になるはず。
                         rld.lm_to_obs[kpt_obs.kpt_id].emplace_back(
                             //! HsotFrameにおける今回のTargetFrameのIndex
                             rld.Hpppl.size(),
                             //! 今回のTargetFrameにおける`kpt_obs.kpt_id`のLMのIndex
                             frld.lm_id.size() - 1);
-
                       }
                     }
                   },
                   calib.intrinsics[tcid_t.cam_id].variant);
-
 
               /**
                * @brief まとめると…
@@ -462,12 +473,19 @@ void BundleAdjustmentBase::linearizeHelper(
                * - rld : HostFrameに紐づく
                * - frld : HostFrame, TargetFrameの組み合わせに紐づく
                *
-               * - rld::error : WeightをかけたReprojection errorをTargetFrameで観測したLM文すべて加算
-               * - rld::Hll : HostFrame ID, Keypoint IDの組み合わせ, TargetFrameごとにHessianを計算、Keypoint IDごとに計算結果を加算
-               * - rld::bl : HostFrame ID, Keypoint IDの組み合わせ, TargetFrameごとにGradientを計算、Keypoint IDごとに計算結果を加算
-               * - frld::Hpp : HostFrame ID, TargetFrame IDの組み合わせ, Host,TargetのIntersectionLMについてJacobian全てを加算
-               * - frld::bp : HostFrame ID, TargetFrame IDの組み合わせ, Host,TargetのIntersectionLMについてJacobian全てを加算
-               * - frld::Hpl : HostFrame ID, TargetFrame ID, Keypoint IDの組わせでスタックされる
+               * - rld::error : WeightをかけたReprojection
+               * errorをTargetFrameで観測したLM文すべて加算
+               * - rld::Hll : HostFrame ID, Keypoint IDの組み合わせ,
+               * TargetFrameごとにHessianを計算、Keypoint IDごとに計算結果を加算
+               * - rld::bl : HostFrame ID, Keypoint IDの組み合わせ,
+               * TargetFrameごとにGradientを計算、Keypoint
+               * IDごとに計算結果を加算
+               * - frld::Hpp : HostFrame ID, TargetFrame IDの組み合わせ,
+               * Host,TargetのIntersectionLMについてJacobian全てを加算
+               * - frld::bp : HostFrame ID, TargetFrame IDの組み合わせ,
+               * Host,TargetのIntersectionLMについてJacobian全てを加算
+               * - frld::Hpl : HostFrame ID, TargetFrame ID, Keypoint
+               * IDの組わせでスタックされる
                */
 
               /**
@@ -486,10 +504,10 @@ void BundleAdjustmentBase::linearizeHelper(
               // it just depends on the point
 
               std::visit(
-                  [&](const auto& cam) {
+                  [&](const auto &cam) {
                     for (size_t i = 0; i < obs_kv.second.size(); i++) {
-                      const KeypointObservation& kpt_obs = obs_kv.second[i];
-                      const KeypointPosition& kpt_pos =
+                      const KeypointObservation &kpt_obs = obs_kv.second[i];
+                      const KeypointPosition &kpt_pos =
                           lmdb.getLandmark(kpt_obs.kpt_id);
 
                       Eigen::Vector2d res;
@@ -506,7 +524,7 @@ void BundleAdjustmentBase::linearizeHelper(
                             huber_weight / (obs_std_dev * obs_std_dev);
 
                         rld.error += (2 - huber_weight) * obs_weight *
-                                     res.transpose() * res;
+                            res.transpose() * res;
 
                         if (rld.Hll.count(kpt_obs.kpt_id) == 0) {
                           rld.Hll[kpt_obs.kpt_id].setZero();
@@ -526,12 +544,12 @@ void BundleAdjustmentBase::linearizeHelper(
         }
       });
 
-  for (const auto& rld : rld_vec) error += rld.error;
+  for (const auto &rld : rld_vec) error += rld.error;
 }
 
-void BundleAdjustmentBase::linearizeRel(const RelLinData& rld,
-                                        Eigen::MatrixXd& H,
-                                        Eigen::VectorXd& b) {
+void BundleAdjustmentBase::linearizeRel(const RelLinData &rld,
+                                        Eigen::MatrixXd &H,
+                                        Eigen::VectorXd &b) {
   //  std::cout << "linearizeRel: KF " << frame_states.size() << " obs "
   //            << obs.size() << std::endl;
 
@@ -541,7 +559,7 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData& rld,
   b.setZero(POSE_SIZE * msize);
 
   for (size_t i = 0; i < rld.order.size(); i++) {
-    const FrameRelLinData& frld = rld.Hpppl.at(i);
+    const FrameRelLinData &frld = rld.Hpppl.at(i);
 
     H.block<POSE_SIZE, POSE_SIZE>(POSE_SIZE * i, POSE_SIZE * i) += frld.Hpp;
     b.segment<POSE_SIZE>(POSE_SIZE * i) += frld.bp;
@@ -553,9 +571,9 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData& rld,
       H_pl_H_ll_inv = frld.Hpl[j] * rld.Hll.at(lm_id);
       b.segment<POSE_SIZE>(POSE_SIZE * i) -= H_pl_H_ll_inv * rld.bl.at(lm_id);
 
-      const auto& other_obs = rld.lm_to_obs.at(lm_id);
+      const auto &other_obs = rld.lm_to_obs.at(lm_id);
       for (size_t k = 0; k < other_obs.size(); k++) {
-        const FrameRelLinData& frld_other = rld.Hpppl.at(other_obs[k].first);
+        const FrameRelLinData &frld_other = rld.Hpppl.at(other_obs[k].first);
         int other_i = other_obs[k].first;
 
         Eigen::Matrix<double, 3, POSE_SIZE> H_l_p_other =
@@ -569,12 +587,12 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData& rld,
 }
 
 void BundleAdjustmentBase::get_current_points(
-    Eigen::aligned_vector<Eigen::Vector3d>& points,
-    std::vector<int>& ids) const {
+    Eigen::aligned_vector<Eigen::Vector3d> &points,
+    std::vector<int> &ids) const {
   points.clear();
   ids.clear();
 
-  for (const auto& tcid_host : lmdb.getHostKfs()) {
+  for (const auto &tcid_host : lmdb.getHostKfs()) {
     Sophus::SE3d T_w_i;
 
     int64_t id = tcid_host.frame_id;
@@ -590,11 +608,11 @@ void BundleAdjustmentBase::get_current_points(
       std::abort();
     }
 
-    const Sophus::SE3d& T_i_c = calib.T_i_c[tcid_host.cam_id];
+    const Sophus::SE3d &T_i_c = calib.T_i_c[tcid_host.cam_id];
     Eigen::Matrix4d T_w_c = (T_w_i * T_i_c).matrix();
 
-    for (const KeypointPosition& kpt_pos :
-         lmdb.getLandmarksForHost(tcid_host)) {
+    for (const KeypointPosition &kpt_pos :
+        lmdb.getLandmarksForHost(tcid_host)) {
       Eigen::Vector4d pt_cam =
           StereographicParam<double>::unproject(kpt_pos.dir);
       pt_cam[3] = kpt_pos.id;
@@ -619,7 +637,7 @@ void BundleAdjustmentBase::filterOutliers(double outlier_threshold,
   //  "
   //            << outliers.size() << std::endl;
 
-  for (const auto& kv : outliers) {
+  for (const auto &kv : outliers) {
     int num_obs = lmdb.numObservations(kv.first);
     int num_outliers = kv.second.size();
 
@@ -630,7 +648,7 @@ void BundleAdjustmentBase::filterOutliers(double outlier_threshold,
     //    std::cout << "\tlm_id: " << kv.first << " num_obs: " << num_obs
     //              << " outliers: " << num_outliers << " [";
 
-    for (const auto& kv2 : kv.second) {
+    for (const auto &kv2 : kv.second) {
       if (kv2.second == -2) remove = true;
 
       //      std::cout << kv2.second << ", ";
@@ -642,7 +660,7 @@ void BundleAdjustmentBase::filterOutliers(double outlier_threshold,
       lmdb.removeLandmark(kv.first);
     } else {
       std::set<TimeCamId> outliers;
-      for (const auto& kv2 : kv.second) outliers.emplace(kv2.first);
+      for (const auto &kv2 : kv.second) outliers.emplace(kv2.first);
       lmdb.removeObservations(kv.first, outliers);
     }
   }
@@ -651,12 +669,12 @@ void BundleAdjustmentBase::filterOutliers(double outlier_threshold,
   // std::endl;
 }
 
-void BundleAdjustmentBase::marginalizeHelper(Eigen::MatrixXd& abs_H,
-                                             Eigen::VectorXd& abs_b,
-                                             const std::set<int>& idx_to_keep,
-                                             const std::set<int>& idx_to_marg,
-                                             Eigen::MatrixXd& marg_H,
-                                             Eigen::VectorXd& marg_b) {
+void BundleAdjustmentBase::marginalizeHelper(Eigen::MatrixXd &abs_H,
+                                             Eigen::VectorXd &abs_b,
+                                             const std::set<int> &idx_to_keep,
+                                             const std::set<int> &idx_to_marg,
+                                             Eigen::MatrixXd &marg_H,
+                                             Eigen::VectorXd &marg_b) {
   int keep_size = idx_to_keep.size();
   int marg_size = idx_to_marg.size();
 
@@ -664,7 +682,7 @@ void BundleAdjustmentBase::marginalizeHelper(Eigen::MatrixXd& abs_H,
 
   // Fill permutation matrix
   Eigen::Matrix<int, Eigen::Dynamic, 1> indices(idx_to_keep.size() +
-                                                idx_to_marg.size());
+      idx_to_marg.size());
 
   {
     auto it = idx_to_keep.begin();
@@ -697,8 +715,8 @@ void BundleAdjustmentBase::marginalizeHelper(Eigen::MatrixXd& abs_H,
   //  marg_size).ldlt().solveInPlace(H_mm_inv);
 
   H_mm_inv = abs_H.bottomRightCorner(marg_size, marg_size)
-                 .fullPivLu()
-                 .solve(Eigen::MatrixXd::Identity(marg_size, marg_size));
+      .fullPivLu()
+      .solve(Eigen::MatrixXd::Identity(marg_size, marg_size));
 
   //  H_mm_inv = abs_H.bottomRightCorner(marg_size, marg_size)
   //                 .fullPivHouseholderQr()
@@ -711,18 +729,18 @@ void BundleAdjustmentBase::marginalizeHelper(Eigen::MatrixXd& abs_H,
   marg_b = abs_b.head(keep_size);
 
   marg_H -= abs_H.topRightCorner(keep_size, marg_size) *
-            abs_H.bottomLeftCorner(marg_size, keep_size);
+      abs_H.bottomLeftCorner(marg_size, keep_size);
   marg_b -= abs_H.topRightCorner(keep_size, marg_size) * abs_b.tail(marg_size);
 
   abs_H.resize(0, 0);
   abs_b.resize(0);
 }
 
-void BundleAdjustmentBase::computeDelta(const AbsOrderMap& marg_order,
-                                        Eigen::VectorXd& delta) const {
+void BundleAdjustmentBase::computeDelta(const AbsOrderMap &marg_order,
+                                        Eigen::VectorXd &delta) const {
   size_t marg_size = marg_order.total_size;
   delta.setZero(marg_size);
-  for (const auto& kv : marg_order.abs_order_map) {
+  for (const auto &kv : marg_order.abs_order_map) {
     if (kv.second.second == POSE_SIZE) {
       BASALT_ASSERT(frame_poses.at(kv.first).isLinearized());
       delta.segment<POSE_SIZE>(kv.second.first) =
@@ -737,19 +755,19 @@ void BundleAdjustmentBase::computeDelta(const AbsOrderMap& marg_order,
   }
 }
 
-void BundleAdjustmentBase::linearizeMargPrior(const AbsOrderMap& marg_order,
-                                              const Eigen::MatrixXd& marg_H,
-                                              const Eigen::VectorXd& marg_b,
-                                              const AbsOrderMap& aom,
-                                              Eigen::MatrixXd& abs_H,
-                                              Eigen::VectorXd& abs_b,
-                                              double& marg_prior_error) const {
+void BundleAdjustmentBase::linearizeMargPrior(const AbsOrderMap &marg_order,
+                                              const Eigen::MatrixXd &marg_H,
+                                              const Eigen::VectorXd &marg_b,
+                                              const AbsOrderMap &aom,
+                                              Eigen::MatrixXd &abs_H,
+                                              Eigen::VectorXd &abs_b,
+                                              double &marg_prior_error) const {
   // Assumed to be in the top left corner
 
   BASALT_ASSERT(size_t(marg_H.cols()) == marg_order.total_size);
 
   // Check if the order of variables is the same.
-  for (const auto& kv : marg_order.abs_order_map)
+  for (const auto &kv : marg_order.abs_order_map)
     BASALT_ASSERT(aom.abs_order_map.at(kv.first) == kv.second);
 
   size_t marg_size = marg_order.total_size;
@@ -766,8 +784,8 @@ void BundleAdjustmentBase::linearizeMargPrior(const AbsOrderMap& marg_order,
 }
 
 void BundleAdjustmentBase::computeMargPriorError(
-    const AbsOrderMap& marg_order, const Eigen::MatrixXd& marg_H,
-    const Eigen::VectorXd& marg_b, double& marg_prior_error) const {
+    const AbsOrderMap &marg_order, const Eigen::MatrixXd &marg_H,
+    const Eigen::VectorXd &marg_b, double &marg_prior_error) const {
   BASALT_ASSERT(size_t(marg_H.cols()) == marg_order.total_size);
 
   Eigen::VectorXd delta;
@@ -778,10 +796,10 @@ void BundleAdjustmentBase::computeMargPriorError(
 }
 
 Eigen::VectorXd BundleAdjustmentBase::checkNullspace(
-    const Eigen::MatrixXd& H, const Eigen::VectorXd& b,
-    const AbsOrderMap& order,
-    const Eigen::aligned_map<int64_t, PoseVelBiasStateWithLin>& frame_states,
-    const Eigen::aligned_map<int64_t, PoseStateWithLin>& frame_poses) {
+    const Eigen::MatrixXd &H, const Eigen::VectorXd &b,
+    const AbsOrderMap &order,
+    const Eigen::aligned_map<int64_t, PoseVelBiasStateWithLin> &frame_states,
+    const Eigen::aligned_map<int64_t, PoseStateWithLin> &frame_poses) {
   BASALT_ASSERT(size_t(H.cols()) == order.total_size);
   size_t marg_size = order.total_size;
 
@@ -798,7 +816,7 @@ Eigen::VectorXd BundleAdjustmentBase::checkNullspace(
   mean_trans.setZero();
 
   // Compute mean translation
-  for (const auto& kv : order.abs_order_map) {
+  for (const auto &kv : order.abs_order_map) {
     Eigen::Vector3d trans;
     if (kv.second.second == POSE_SIZE) {
       mean_trans += frame_poses.at(kv.first).getPoseLin().translation();
@@ -817,7 +835,7 @@ Eigen::VectorXd BundleAdjustmentBase::checkNullspace(
   double eps = 0.01;
 
   // Compute nullspace increments
-  for (const auto& kv : order.abs_order_map) {
+  for (const auto &kv : order.abs_order_map) {
     inc_x(kv.second.first + 0) = eps;
     inc_y(kv.second.first + 1) = eps;
     inc_z(kv.second.first + 2) = eps;

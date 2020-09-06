@@ -664,8 +664,11 @@ void KeypointVoEstimator::optimize() {
       auto t1 = std::chrono::high_resolution_clock::now();
 
       /**
-       * @brief Landmarkの観測情報を取得する、Hessianがすでに計算されているポイ
-       */
+       * @brief Landmarkの観測情報を取得する
+       * @details
+       * この関数でそれぞれの観測したKeyPointについて、観測したFrameの座標系におけるHessianを計算しておく。
+       *
+       * */
       double rld_error;
       Eigen::aligned_vector<RelLinData> rld_vec;
       linearizeHelper(rld_vec,
