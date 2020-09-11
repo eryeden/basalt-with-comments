@@ -151,8 +151,7 @@ class BundleAdjustmentBase {
 //    Eigen::Vector3d p_t_3d_only_p = T_t_h.topLeftCorner<3,3>() * p_h_3d.head<3>();
 
     Eigen::Matrix<double, 4, POSE_SIZE> d_point_d_xi;
-    d_point_d_xi.topLeftCorner<3, 3>() =
-        Eigen::Matrix3d::Identity() * kpt_pos.id;
+    d_point_d_xi.topLeftCorner<3, 3>() = Eigen::Matrix3d::Identity() * kpt_pos.id;
     /**
      * ここはどちらでもVOのエラーはかわらない。定数倍になっているがこれは問題にならない？
      * SE3＋Scaleの微分のやり方がわからないので、調べる必要あり。

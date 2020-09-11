@@ -676,8 +676,7 @@ void KeypointVoEstimator::optimize() {
                       rld_error
                       );
 
-      BundleAdjustmentBase::LinearizeAbsReduce<DenseAccumulator<double>> lopt(
-          aom);
+      BundleAdjustmentBase::LinearizeAbsReduce<DenseAccumulator<double>> lopt(aom);
 
       tbb::blocked_range<Eigen::aligned_vector<RelLinData>::iterator> range(
           rld_vec.begin(), rld_vec.end());
