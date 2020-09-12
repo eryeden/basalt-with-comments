@@ -553,7 +553,9 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData &rld,
   //  std::cout << "linearizeRel: KF " << frame_states.size() << " obs "
   //            << obs.size() << std::endl;
 
-  // Do schur complement
+  //! Do schur complement
+
+  //! HostFrameに含まれるTargetFrameの数
   size_t msize = rld.order.size();
   H.setZero(POSE_SIZE * msize, POSE_SIZE * msize);
   b.setZero(POSE_SIZE * msize);

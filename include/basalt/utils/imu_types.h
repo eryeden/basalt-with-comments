@@ -251,6 +251,8 @@ struct PoseStateWithLin {
 };
 
 struct AbsOrderMap {
+  //! Key : Frame ID,
+  //! Value : [Sliding window全体におけるJacobianの行数に相当するIndex？, Frameが保持する状態の次元]のペア
   std::map<int64_t, std::pair<int, int>> abs_order_map;
   size_t items = 0;
   size_t total_size = 0;

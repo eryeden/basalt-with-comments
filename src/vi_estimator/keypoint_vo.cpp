@@ -627,16 +627,24 @@ void KeypointVoEstimator::optimize() {
   if (true) {
     // Optimize
 
+    //! AOMは毎最適化ごとに構成されている
     AbsOrderMap aom;
 
 
     /**
      * @brief 今回のSiding windowに含まれるPoseの状態ベクトルにおけるIndexを決めている
      */
-    for (const auto& kv : frame_poses) {
-      //! kv.first : FramePoseのIndex
+    for (const auto& kv :
+      //! Sliding windowに入っているFramePose
+        frame_poses
+        ) {
 
-      aom.abs_order_map[kv.first] = std::make_pair(aom.total_size, POSE_SIZE);
+      //! kv.first : FramePoseのIndex
+      aom.abs_order_map[kv.first] = std::make_pair(
+          //! `total_size`はインデックス`kv.first`のSiliding window全体におけるインデックスを示す
+          aom.total_size,
+          //! 持っている状態ベクトルの次元
+          POSE_SIZE);
 
       // Check that we have the same order as marginalization
       //! MarginalizeしたSystemMatrixにおけるPoseの位置と今回のPoseの位置が同じことを保証する
@@ -682,7 +690,7 @@ void KeypointVoEstimator::optimize() {
           rld_vec.begin(), rld_vec.end());
 
       /**
-       * @brief おそらく、ここで並列的にH, bの計算が行われている
+       * @brief HostFrameごとのH,bの計算、accumへの加算をReduceパターンを使って実行している
        */
       tbb::parallel_reduce(range, lopt);
 

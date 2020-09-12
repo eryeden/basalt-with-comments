@@ -315,36 +315,58 @@ class BundleAdjustmentBase {
     return worldPoint;
   }
 
+  /**
+   * @berif 最終的に解くべき, Hx = -bのH, bを、一つのHostFrame分計算、accumに登録する。
+   * @tparam AccumT
+   * @param rel_H : rld中のHessian, gradientに関してPose側へのSchur complementを行ったHessian
+   * @param rel_b : rld中のHessian, gradientに関してPose側へのSchur complementを行ったGradient
+   * @param rld : HostFrameと関係するTargetFrameに関するHessian、Gradientが格納されている？
+   * @param aom : FrameIDと、accumに格納されるH,b中におけるIndexの対応マップ
+   * @param accum : ここに最終的なHx = -bとなるHとbが格納される。
+   */
   template <class AccumT>
-  static void linearizeAbs(const Eigen::MatrixXd& rel_H,
-                           const Eigen::VectorXd& rel_b,
-                           const RelLinDataBase& rld, const AbsOrderMap& aom,
-                           AccumT& accum) {
+  static void linearizeAbs(
+      const Eigen::MatrixXd& rel_H,
+      const Eigen::VectorXd& rel_b,
+      const RelLinDataBase& rld,
+      const AbsOrderMap& aom,
+      AccumT& accum
+      ) {
     // int asize = aom.total_size;
 
     //  BASALT_ASSERT(abs_H.cols() == asize);
     //  BASALT_ASSERT(abs_H.rows() == asize);
     //  BASALT_ASSERT(abs_b.rows() == asize);
 
+    //! Target FrameごとのLoop
     for (size_t i = 0; i < rld.order.size(); i++) {
+      //! HostFrame ID
       const TimeCamId& tcid_h = rld.order[i].first;
+      //! TargetFrame ID, ti :=> target frame i
       const TimeCamId& tcid_ti = rld.order[i].second;
 
+      //! HostFrameのSliding window全体のHessianにおけるIndex
       int abs_h_idx = aom.abs_order_map.at(tcid_h.frame_id).first;
+      //! TargetFrameのSliding window全体のHessianにおけるIndex
       int abs_ti_idx = aom.abs_order_map.at(tcid_ti.frame_id).first;
 
+      //! bのうちのHostFrame成分に加算
       accum.template addB<POSE_SIZE>(
           abs_h_idx, rld.d_rel_d_h[i].transpose() *
                          rel_b.segment<POSE_SIZE>(i * POSE_SIZE));
+      //! bのうちのTargetFrame成分に加算
       accum.template addB<POSE_SIZE>(
           abs_ti_idx, rld.d_rel_d_t[i].transpose() *
                           rel_b.segment<POSE_SIZE>(i * POSE_SIZE));
 
+
       for (size_t j = 0; j < rld.order.size(); j++) {
         BASALT_ASSERT(rld.order[i].first == rld.order[j].first);
 
+        //! Target frame i と Target frame j が登場している
         const TimeCamId& tcid_tj = rld.order[j].second;
 
+        //! Target frame j の全体Index
         int abs_tj_idx = aom.abs_order_map.at(tcid_tj.frame_id).first;
 
         if (tcid_h.frame_id == tcid_ti.frame_id ||
@@ -397,11 +419,16 @@ class BundleAdjustmentBase {
 
     void operator()(const tbb::blocked_range<RelLinDataIter>& range) {
       for (RelLinData& rld : range) {
+
+        //! rldに含まれるHessianをすべて逆行列にして上書きする
         rld.invert_keypoint_hessians();
 
+        //! HostFrameにおけるHessianを計算
+        //! Hessianはδ_pose側にschur complementしたものが計算される
         Eigen::MatrixXd rel_H;
         Eigen::VectorXd rel_b;
         linearizeRel(rld, rel_H, rel_b);
+
 
         linearizeAbs(rel_H, rel_b, rld, aom, accum);
       }
