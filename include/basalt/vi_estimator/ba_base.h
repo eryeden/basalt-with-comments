@@ -429,12 +429,16 @@ class BundleAdjustmentBase {
         Eigen::VectorXd rel_b;
         linearizeRel(rld, rel_H, rel_b);
 
-
+        //! おそらくWorldFrameにおけるHessian, gradientに変換、accumのH,bに加算しておく
+        //! ここで加算されたHostFrameに関するH,bをjoinで全て足していくと全体の状態を加味したH,bが計算される？
         linearizeAbs(rel_H, rel_b, rld, aom, accum);
       }
     }
 
-    void join(LinearizeAbsReduce& rhs) { accum.join(rhs.accum); }
+    void join(LinearizeAbsReduce& rhs) {
+        //! accumのH,bにrhs.accumのH,bを加算するだけ。
+        accum.join(rhs.accum);
+    }
 
     AbsOrderMap& aom;
     AccumT accum;

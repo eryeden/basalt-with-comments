@@ -283,7 +283,7 @@ void BundleAdjustmentBase::linearizeHelper(
         //! 自分も含めてHostしているKeyPointのどれか一つでも観測された回数（Poseの個数）
         //! kv.second : kv.firstで初めて観測したLMをもう一度観測したFrameID（自分も含む）と、観測KeyPoint位置のリストのMap
         kv.second.size());
-  }obs_tcid_vec
+  }
 
   tbb::parallel_for(
       tbb::blocked_range<size_t>(0, obs_tcid_vec.size()),
@@ -547,6 +547,21 @@ void BundleAdjustmentBase::linearizeHelper(
   for (const auto &rld : rld_vec) error += rld.error;
 }
 
+/**
+ * @brief おそらく、HostFrame座標系におけるPoseにMarginalizeされたH, bを計算する。H, bの構成順は`rld.order`の配列順になる。
+ * @details
+ * ここで計算されるH, bはMarginalizeされてたあとのH, bであることに注意。
+ * [Hpp, Hpl; Hpl^T, Hll] [xi_p; xi_l] = [b_p; b_l]
+ * を元のシステムとして、以下のようにMarginalizeした結果が、H, bになる
+ * (Hpp - Hpl Hll^-1 Hpl^T) xi_p = b_p - Hpl Hll^-1 b_l
+ * なので、
+ * H = Hpp - Hpl Hll^-1 Hpl^T
+ * b = b_p - Hpl Hll^-1 b_l
+ * が、ここでの @param H, @param b になる。
+ * @param rld : TargetFrame、Landmark個々の計算済みHessianが格納されている。
+ * @param H : おそらく、HostFrame座標系におけるHessianの計算結果
+ * @param b : おそらく、HostFrame座標系におけるGradientの計算結果
+ */
 void BundleAdjustmentBase::linearizeRel(const RelLinData &rld,
                                         Eigen::MatrixXd &H,
                                         Eigen::VectorXd &b) {
@@ -560,17 +575,30 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData &rld,
   H.setZero(POSE_SIZE * msize, POSE_SIZE * msize);
   b.setZero(POSE_SIZE * msize);
 
+  //! TargetFrameごとのLoop
   for (size_t i = 0; i < rld.order.size(); i++) {
     const FrameRelLinData &frld = rld.Hpppl.at(i);
 
+    /**
+     * Hpp, bpの成分は、HostFrameと一つのTargetFrameの組み合わせで決定されている。
+     */
     H.block<POSE_SIZE, POSE_SIZE>(POSE_SIZE * i, POSE_SIZE * i) += frld.Hpp;
     b.segment<POSE_SIZE>(POSE_SIZE * i) += frld.bp;
 
+    //! HostFrameでHostしたLMのうち、TargetFrameで観測しているLM分のLoop。
     for (size_t j = 0; j < frld.lm_id.size(); j++) {
       Eigen::Matrix<double, POSE_SIZE, 3> H_pl_H_ll_inv;
       int lm_id = frld.lm_id[j];
 
+      /**
+       * @details
+       * H_pl_H_ll_inv == Hpl Hll^-1
+       * Hpl Hll^-1の計算は、一つのTargetFrameと一つのLandmarkの情報のみから計算できる。
+       * Hllの対角成分（正確には対角ではなく、LL成分？）以外ゼロなので、Hpl Hll^-1を計算すると、
+       * 注目しているLM idのみしか残らないため。
+       */
       H_pl_H_ll_inv = frld.Hpl[j] * rld.Hll.at(lm_id);
+      //! b == b_p - Hpl Hll^-1 b_l, この計算も同様に一つのTargetFrameとLandmarkのペアから計算できる
       b.segment<POSE_SIZE>(POSE_SIZE * i) -= H_pl_H_ll_inv * rld.bl.at(lm_id);
 
       const auto &other_obs = rld.lm_to_obs.at(lm_id);
@@ -578,6 +606,8 @@ void BundleAdjustmentBase::linearizeRel(const RelLinData &rld,
         const FrameRelLinData &frld_other = rld.Hpppl.at(other_obs[k].first);
         int other_i = other_obs[k].first;
 
+        //! Hpl Hll^-1 Hpl^T はTargetFrameで観測している全てのLMの情報が必要になる。
+        //! Hpl Hll^-1はブロック的には対角行列になっているので、後ろからかかる行列全ての情報が必要になる。
         Eigen::Matrix<double, 3, POSE_SIZE> H_l_p_other =
             frld_other.Hpl[other_obs[k].second].transpose();
 
