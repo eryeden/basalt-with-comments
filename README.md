@@ -1,6 +1,6 @@
 ## Basalt with comments
-- [figures.io](https://drive.google.com/file/d/1lRSxYYyr_uu4ULZOs3ymee84Xdeb6yEw/view?usp=sharing)
-
+- [figures .io](https://drive.google.com/file/d/1lRSxYYyr_uu4ULZOs3ymee84Xdeb6yEw/view?usp=sharing)
+- [Adaptive Relative Bundle Adjustment](https://drive.google.com/file/d/1EX_7tMLfgwLxDg0c8ujtbkhP5yPpIvG4/view?usp=sharing)
 
 [![pipeline status](https://gitlab.com/VladyslavUsenko/basalt/badges/master/pipeline.svg)](https://gitlab.com/VladyslavUsenko/basalt/commits/master)
 

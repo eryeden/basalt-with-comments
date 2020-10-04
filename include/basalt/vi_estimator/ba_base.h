@@ -153,7 +153,7 @@ class BundleAdjustmentBase {
     Eigen::Matrix<double, 4, POSE_SIZE> d_point_d_xi;
     d_point_d_xi.topLeftCorner<3, 3>() = Eigen::Matrix3d::Identity() * kpt_pos.id;
     /**
-     * ここはどちらでもVOのエラーはかわらない。定数倍になっているがこれは問題にならない？
+     * ここはどちらでもVOの推定軌跡の精度はかわらない。定数倍になっているがこれは問題にならない？
      * SE3＋Scaleの微分のやり方がわからないので、調べる必要あり。
      */
     d_point_d_xi.topRightCorner<3, 3>() = -Sophus::SO3d::hat(p_t_3d.head<3>());
