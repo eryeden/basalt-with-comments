@@ -1,5 +1,13 @@
 # linearizePoint
 
+## ToC
+- res
+- d_res_d_xi
+- d_res_d_p
+- $T_{th} \boldsymbol{q}$のJacobian
+- 便利式
+
+
 ## res
 ベースとなるReprojection errorの式。論文と右辺の式のマイナスする順序が逆になっているので注意。
 $$
@@ -112,3 +120,26 @@ I_{33}
     \boldsymbol{0}_{13} & \boldsymbol{0}_{13}
 \end{bmatrix}
 $$
+
+
+## d_res_d_p
+再投影誤差の$\boldsymbol{m}_i \in \mathbb{R}^4$についてのJacobian。$\mathbb{R}^4$についてのJacobianなので
+接空間の違いについて考える必要はなし。以下のように計算される。
+$$
+
+\mathrm{d\_res\_d\_p} = 
+\frac{D \boldsymbol{r}_{it}}{D {}_h \boldsymbol{m}_i} = 
+\frac{\partial \pi}{\partial (T_{th} \boldsymbol{q}({}_h \boldsymbol{m}_i))}
+\frac{D T_{th} \boldsymbol{q}({}_h \boldsymbol{m}_i)}{D \boldsymbol{q}({}_h\boldsymbol{m}_i)}
+\frac{\partial \boldsymbol{q}({}_h\boldsymbol{m}_i)}{\partial {}_h\boldsymbol{m}_i}\\
+= J_p T_{th} J_{up}
+
+$$
+
+
+
+## $T_{th} \boldsymbol{q}$のJacobian
+
+
+## 便利式
+
