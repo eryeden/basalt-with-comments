@@ -233,7 +233,8 @@ $$
 = \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
 \frac{
     \begin{bmatrix}
-        R(\mathrm{Exp}(\boldsymbol{\theta})\boldsymbol{p} - \boldsymbol{p})+dR\boldsymbol{V}(\boldsymbol{\theta})\boldsymbol{\rho}
+        R(\mathrm{Exp}(\boldsymbol{\theta})\boldsymbol{p} - \boldsymbol{p})+dR\boldsymbol{V}(\boldsymbol{\theta})\boldsymbol{\rho}\\
+        0
     \end{bmatrix}
 }
 {\boldsymbol{\tau}}\\
