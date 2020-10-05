@@ -138,8 +138,156 @@ $$
 
 
 
-## $T_{th} \boldsymbol{q}$のJacobian
+## $T \boldsymbol{q}$のJacobian
+### $T$についてのJacobian
+$T \in SE(3)$と、$\boldsymbol{q} = [\boldsymbol{p}, d]^T$のAction:$T \boldsymbol{q}$について、
+$$
+\frac{{}^{T} D T \boldsymbol{q}}{D T}
+$$
+を計算する。
+このとき、
+$$
+T_{th} = 
+\begin{bmatrix}
+    R & \boldsymbol{t} \\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\\
+\boldsymbol{q} = 
+\begin{bmatrix}
+    \boldsymbol{p} \in \mathbb{R}^3\\
+    d
+\end{bmatrix}
+$$
+としている。
 
+Right-jacobianの定義から計算していく。以下のように最終的に分子を$J\boldsymbol{\tau}$の行列×ベクトルの形に変形できれば、そのときの行列$J$がRight-jacobianになる。この形を目標に式変形する。
+$$
+\frac{{}^{T} D T \boldsymbol{q}}{D T} = 
+\lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} \frac{(T \oplus \tau) \boldsymbol{q} \ominus T \boldsymbol{q}}{\tau}\\
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} \frac{J\boldsymbol{\tau}}{\tau} = J
+$$
+なお、$\boldsymbol{\tau}$は$T$の接空間におけるベクトルを成分表示したもので、
+$$
+\boldsymbol{\tau} = 
+\begin{bmatrix}
+    \boldsymbol{\rho} \in \mathbb{R}^3\\
+    \boldsymbol{\theta} \in \mathbb{R}^3
+\end{bmatrix}
+$$
+としている。$\boldsymbol{\rho}$は$T$の座標系における速度ベクトル、$\boldsymbol{\theta}$は$T$の座標系における角速度ベクトル相当する。
+
+分子を変形して、$J\boldsymbol{\tau}$の形にすることでRight-jacobianを計算する。
+$$
+\lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} \frac{(T \oplus \tau) \boldsymbol{q} \ominus T \boldsymbol{q}}{\tau}
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} \frac{T \mathrm{Exp}(\boldsymbol{\tau})\boldsymbol{q} - T \boldsymbol{q}}{\boldsymbol{\tau}}\\
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} 
+\frac{
+    \begin{bmatrix}
+        R & \boldsymbol{t}\\
+        \boldsymbol{0}_{13} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+        \mathrm{Exp}(\boldsymbol{\theta}) & \boldsymbol{V}(\boldsymbol{\theta})\boldsymbol{\rho} \\
+        \boldsymbol{0}_{13} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+        \boldsymbol{p}\\
+        d
+    \end{bmatrix}
+     - 
+     \begin{bmatrix}
+        R & \boldsymbol{t}\\
+        \boldsymbol{0}_{13} & 1 
+     \end{bmatrix} 
+     \begin{bmatrix}
+         \boldsymbol{p}\\
+         d
+     \end{bmatrix}
+     }
+     {\boldsymbol{\tau}}\\
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        R(\mathrm{Exp}(\boldsymbol{\theta})\boldsymbol{p} - \boldsymbol{p})+dR\boldsymbol{V}(\boldsymbol{\theta})\boldsymbol{\rho}
+    \end{bmatrix}
+}
+{\boldsymbol{\tau}}
+$$
+
+
+このとき、$\tau \rightarrow \boldsymbol{0}$なので次の式が成り立つ。
+$\sin$、$\cos$をテイラー展開し1次の項まで利用すれば、
+$$
+\mathrm{Exp}(\boldsymbol{\theta}) = \mathrm{Exp}(\theta \boldsymbol{u}) = I + \sin\theta [\boldsymbol{u}]_\times +(1-\cos\theta)[\boldsymbol{u}]_\times^2\\
+\approx I + [\boldsymbol\theta]_\times
+$$
+また、
+$$
+\boldsymbol{V}(\theta) = I + \frac{1-\cos\theta}{\theta}[\boldsymbol{u}]_\times + \frac{\theta - \sin\theta}{\theta}[\boldsymbol{u}]_\times^2\\
+\approx I
+$$
+
+よって、
+$$
+\lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}} \frac{(T \oplus \tau) \boldsymbol{q} \ominus T \boldsymbol{q}}{\tau}
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        R(\mathrm{Exp}(\boldsymbol{\theta})\boldsymbol{p} - \boldsymbol{p})+dR\boldsymbol{V}(\boldsymbol{\theta})\boldsymbol{\rho}
+    \end{bmatrix}
+}
+{\boldsymbol{\tau}}\\
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        R[\boldsymbol{\theta}]_\times \boldsymbol{p} + dRI\boldsymbol{\rho}\\
+        0
+    \end{bmatrix}
+}{\boldsymbol{\tau}} 
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        -R[\boldsymbol{p}]_\times \boldsymbol{\theta} + dR\boldsymbol{\rho}\\
+        0
+    \end{bmatrix}
+}{\boldsymbol{\tau}} 
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        dR & -R[\boldsymbol{p}]_\times\\
+        \boldsymbol{0}_{13} & \boldsymbol{0}_{13}
+    \end{bmatrix}
+    \begin{bmatrix}
+        \boldsymbol{\rho}\\
+        \boldsymbol{\theta}
+    \end{bmatrix}
+}{\boldsymbol{\tau}} \\
+= \lim_{\boldsymbol{\tau}\rightarrow \boldsymbol{0}}
+\frac{
+    \begin{bmatrix}
+        dR & -R[\boldsymbol{p}]_\times\\
+        \boldsymbol{0}_{13} & \boldsymbol{0}_{13}
+    \end{bmatrix} \boldsymbol{\tau}
+}{\boldsymbol{\tau}} \\
+$$
+つまり、
+$$
+\frac{{}^{T} D T \boldsymbol{q}}{D T} = 
+\begin{bmatrix}
+        dR & -R[\boldsymbol{p}]_\times\\
+        \boldsymbol{0}_{13} & \boldsymbol{0}_{13}
+    \end{bmatrix}
+$$
+
+### $\boldsymbol{q}$について
+$T$についての場合と同様に計算できる。
 
 ## 便利式
-
+$R\in SO3$、$\boldsymbol{\theta} \in \mathbb{R}^3$として、
+$$
+[R \boldsymbol{\theta}]_\times = R [\boldsymbol{\theta}]_\times R^T
+$$
+また、
+$$
+[\boldsymbol{a}]_\times \boldsymbol{b} = - [\boldsymbol{b}]_\times \boldsymbol{a}
+$$
