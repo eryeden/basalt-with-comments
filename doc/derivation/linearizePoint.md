@@ -4,7 +4,7 @@
 - res
 - d_res_d_xi
 - d_res_d_p
-- $T_{th} \boldsymbol{q}$のJacobian
+- $T \boldsymbol{q}$のJacobianの導出
 - 便利式
 
 
