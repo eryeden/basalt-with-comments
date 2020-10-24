@@ -66,6 +66,7 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
   T_t_i_h_i.so3() = T_w_i_t.so3().inverse() * T_w_i_h.so3();
   T_t_i_h_i.translation() =
       T_w_i_t.so3().inverse() * (T_w_i_h.translation() - T_w_i_t.translation());
+//  T_t_i_h_i = T_w_i_t.inverse() * T_w_i_h;
 
   //! IMU,host to Camera,target
   Sophus::SE3d tmp = tmp2 * T_t_i_h_i;

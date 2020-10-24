@@ -1,4 +1,135 @@
 
-# How to understand `d_rel_d_h`, `d_rel_d_t`.
+# How to understand `d_rel_d_h`, `d_rel_d_t` in `BundleAdjustmentBase::computeRelPose`.
 
-Thanks for sharing grate VI-SLAM.
+Thank you for sharing a grate software!!
+Basaltのコードを最近調べているのですが、`BundleAdjustmentBase::computeRelPose`内の`d_rel_d_h`, `d_rel_d_t`の計算の理解に手間取っています。自分の理解のどこが間違っているか教えていただけるとありがたいです。
+I read code of basalt recently, but I can't understand the calculation of `d_rel_d_h` and `d_rel_d_t` at `BundleAdjustmentBase::computeRelPose`.
+Could you please point out the mistakes of my derivation?
+
+`d_rel_d_h`:
+
+`d_rel_d_h`は、`T_i_c_t^T T_w_i_t^T T_w_i_h T_i_c_h`の`T_w_i_h`についてのLeft jacobianと考えています。
+よって、
+
+
+I believe that `d_rel_d_h` is Left jacobian for `T_i_c_t^T T_w_i_t^T T_w_i_h T_i_c_h` on `T_w_i_h`. Therefore, 
+$$
+\begin{aligned}
+\mathrm{d\_rel\_d\_h} &=
+\frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh} }{D~ T_{WIh}}\\
+&= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh}T_{ICh}}{D~ T_{WIh} T_{ICh}} 
+\frac{{}^\mathcal{E} D~ T_{WIh} T_{ICh} }{D~ T_{WIh}}\\
+&=\boldsymbol{A}d_{(T_{ICt}^{-1} T_{WIt}^{-1})} \boldsymbol{I}_{66}
+\end{aligned}
+
+$$
+
+But, the calculation of `d_rel_d_h` on the code is completely different from my derivation...
+
+しかしながらコード上の`d_rel_d_h`の式は完全に違っています。
+
+`d_rel_d_t`:
+
+I also believe that `d_rel_d_t` is Left jacobian for `T_i_c_t^T T_w_i_t^T T_w_i_h T_i_c_h` on `T_w_i_t`. Therefore, 
+
+
+`d_rel_d_t`は`T_i_c_t^T T_w_i_t^T T_w_i_h T_i_c_h`の`T_w_i_t`についてのLeft jacobianと考えています。
+よって、
+$$
+\begin{aligned}
+\mathrm{d\_rel\_d\_t} &= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh} }{D~ T_{WIt}}\\
+&= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh}  }{D~ T_{WIt}^{-1} T_{WIh} T_{ICh}}
+\frac{{}^\mathcal{E} D~ T_{WIt}^{-1} T_{WIh} T_{ICh}}{D~ T_{WIt}^{-1}}
+\frac{{}^\mathcal{E} D~ T_{WIt}^{-1}}{D~ T_{WIt}}\\
+&= \boldsymbol{A}d_{T_{ICt}^{-1}} \boldsymbol{I}_{66} (-\boldsymbol{A}d_{T_{WIt}^{-1}})    
+\end{aligned}
+
+$$
+
+This one is a bit close, but it's different from the calculation in the code...
+
+こちらも少し惜しいのですが、コード上の計算と違っています。
+間違っているところ、考えを指摘していただけるとありがたいです。
+
+
+Note:.
+
+
+$$
+\mathrm{Ad}_{M} = \begin{bmatrix}
+    R & [\boldsymbol{t}]_\times R\\
+    \boldsymbol{0}_{33} & R
+\end{bmatrix}
+$$
+
+where
+
+$$
+M = \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix} \in SE(3)
+$$
+
+Jacobian $\frac{{{}^{\mathcal{E}}}D f(X)}{D X}$ is taken from equation (44) in http://arxiv.org/abs/1812.01537.
+
+
+
+### Post
+
+Thank you for sharing a great software!!
+
+I read code recently, but I can't understand the calculation of `d_rel_d_h` and `d_rel_d_t` in `BundleAdjustmentBase::computeRelPose`.
+Could you please point out the mistakes of my derivation?
+
+`d_rel_d_h`:
+
+I believe that `d_rel_d_h` is Left jacobian for `T_i_c_t^-1 T_w_i_t^-1 T_w_i_h T_i_c_h` on `T_w_i_h`. 
+Therefore, 
+```math
+\begin{aligned}
+\mathrm{d\_rel\_d\_h} &=
+\frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh} }{D~ T_{WIh}}\\
+&= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh}T_{ICh}}{D~ T_{WIh} T_{ICh}} 
+\frac{{}^\mathcal{E} D~ T_{WIh} T_{ICh} }{D~ T_{WIh}}\\
+&=\boldsymbol{A}d_{(T_{ICt}^{-1} T_{WIt}^{-1})} \boldsymbol{I}_{66}
+\end{aligned}
+```
+But, the calculation of `d_rel_d_h` on the code is completely different from my derivation...
+
+`d_rel_d_t`:
+
+I also believe that `d_rel_d_t` is Left jacobian for `T_i_c_t^-1 T_w_i_t^-1 T_w_i_h T_i_c_h` on `T_w_i_t`. 
+Therefore, 
+
+```math
+\begin{aligned}
+\mathrm{d\_rel\_d\_t} &= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh} }{D~ T_{WIt}}\\
+&= \frac{{}^\mathcal{E} D~ T_{ICt}^{-1} T_{WIt}^{-1} T_{WIh} T_{ICh}  }{D~ T_{WIt}^{-1} T_{WIh} T_{ICh}}
+\frac{{}^\mathcal{E} D~ T_{WIt}^{-1} T_{WIh} T_{ICh}}{D~ T_{WIt}^{-1}}
+\frac{{}^\mathcal{E} D~ T_{WIt}^{-1}}{D~ T_{WIt}}\\
+&= \boldsymbol{A}d_{T_{ICt}^{-1}} \boldsymbol{I}_{66} (-\boldsymbol{A}d_{T_{WIt}^{-1}})    
+\end{aligned}
+```
+This one is a bit close, but it's different from the calculation in the code...
+
+Note:
+
+- Adjoint $`M \in SE(3)`$ is
+```math
+\mathrm{Ad}_{M} = \begin{bmatrix}
+    R & [\boldsymbol{t}]_\times R\\
+    \boldsymbol{0}_{33} & R
+\end{bmatrix}
+```
+
+where
+
+```math
+M = \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}.
+```
+
+- Jacobian $`\frac{{{}^{\mathcal{E}}}D f(X)}{D X}`$ is taken from equation (44) in http://arxiv.org/abs/1812.01537.
