@@ -334,6 +334,76 @@ TEST(VioTestSuite, RelPoseTest) {
   }
 }
 
+TEST(VioTestSuite, RelPoseSE3IncrementTest) {
+  Sophus::SE3d T_w_i_h = Sophus::se3_expd(Sophus::Vector6d::Random());
+  Sophus::SE3d T_w_i_t = Sophus::se3_expd(Sophus::Vector6d::Random());
+
+  Sophus::SE3d T_i_c_h = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
+  Sophus::SE3d T_i_c_t = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
+
+  Sophus::Matrix6d d_rel_d_h, d_rel_d_t;
+
+  Sophus::SE3d T_t_h_sophus = basalt::KeypointVioEstimator::computeRelPose(
+      T_w_i_h, T_i_c_h, T_w_i_t, T_i_c_t, &d_rel_d_h, &d_rel_d_t);
+
+  {
+    Sophus::Vector6d x0;
+    x0.setZero();
+    test_jacobian(
+        "d_rel_d_h", d_rel_d_h,
+        [&](const Sophus::Vector6d& x) {
+          Sophus::SE3d T_w_h_new = T_w_i_h;
+          /**
+           * @brief decoupled left increment(Manifold of <R^3, SO3>)による微小変化
+           * @details
+           * 他の演算はSE3のままになっているので変換するという考え方がよい？
+           */
+//          basalt::PoseState::incPose(x, T_w_h_new);
+          /**
+           * @brief se3 left increment
+           * @details
+           * computeRelPoseのJacobianをSE3の想定にしたらこのテストは通るはず？
+           * se3_expedとSE3d::expはここでは計算結果が同じだった。
+           */
+          T_w_h_new = Sophus::SE3d::exp(x) * T_w_h_new;
+//          T_w_h_new = Sophus::se3_expd(x) * T_w_h_new;
+
+//          std::cout << "Diff norm: " << (T_w_h_new_test.matrix() - T_w_h_new.matrix()).norm()
+//          << std::endl;
+//          std::cout << "se3 exp: [" << T_w_h_new_test.matrix() << "]" << std::endl;
+//          std::cout << "se3 decoupled exp: [" << T_w_h_new.matrix() << "]" << std::endl;
+
+
+          Sophus::SE3d T_t_h_sophus_new =
+              basalt::KeypointVioEstimator::computeRelPose(T_w_h_new, T_i_c_h,
+                                                           T_w_i_t, T_i_c_t);
+
+          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+        },
+        x0);
+  }
+
+  {
+    Sophus::Vector6d x0;
+    x0.setZero();
+    test_jacobian(
+        "d_rel_d_t", d_rel_d_t,
+        [&](const Sophus::Vector6d& x) {
+          Sophus::SE3d T_w_t_new = T_w_i_t;
+//          basalt::PoseState::incPose(x, T_w_t_new); // decoupled left increment
+          T_w_t_new = Sophus::SE3d::exp(x) * T_w_t_new; // se3 based left increment
+//          T_w_t_new = Sophus::se3_expd(x) * T_w_t_new;
+
+          Sophus::SE3d T_t_h_sophus_new =
+              basalt::KeypointVioEstimator::computeRelPose(T_w_i_h, T_i_c_h,
+                                                           T_w_t_new, T_i_c_t);
+          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+        },
+        x0);
+  }
+}
+
+
 TEST(VioTestSuite, LinearizePointsTest) {
   basalt::ExtendedUnifiedCamera<double> cam =
       basalt::ExtendedUnifiedCamera<double>::getTestProjections()[0];
