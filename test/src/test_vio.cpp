@@ -335,11 +335,22 @@ TEST(VioTestSuite, RelPoseTest) {
 }
 
 TEST(VioTestSuite, RelPoseSE3IncrementTest) {
-  Sophus::SE3d T_w_i_h = Sophus::se3_expd(Sophus::Vector6d::Random());
-  Sophus::SE3d T_w_i_t = Sophus::se3_expd(Sophus::Vector6d::Random());
+  /*
+   * - se3_expd : Decoupled SE3 exponentiation
+   * - SE3d::exp : Coupled SE3 exponentiation
+   */
 
-  Sophus::SE3d T_i_c_h = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
-  Sophus::SE3d T_i_c_t = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
+//  Sophus::SE3d T_w_i_h = Sophus::se3_expd(Sophus::Vector6d::Random());
+//  Sophus::SE3d T_w_i_t = Sophus::se3_expd(Sophus::Vector6d::Random());
+//
+//  Sophus::SE3d T_i_c_h = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
+//  Sophus::SE3d T_i_c_t = Sophus::se3_expd(Sophus::Vector6d::Random() / 10);
+
+  Sophus::SE3d T_w_i_h = Sophus::SE3d::exp(Sophus::Vector6d::Random());
+  Sophus::SE3d T_w_i_t = Sophus::SE3d::exp(Sophus::Vector6d::Random());
+
+  Sophus::SE3d T_i_c_h = Sophus::SE3d::exp(Sophus::Vector6d::Random() / 10);
+  Sophus::SE3d T_i_c_t = Sophus::SE3d::exp(Sophus::Vector6d::Random() / 10);
 
   Sophus::Matrix6d d_rel_d_h, d_rel_d_t;
 
@@ -378,7 +389,8 @@ TEST(VioTestSuite, RelPoseSE3IncrementTest) {
               basalt::KeypointVioEstimator::computeRelPose(T_w_h_new, T_i_c_h,
                                                            T_w_i_t, T_i_c_t);
 
-          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+//          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+          return (T_t_h_sophus_new * T_t_h_sophus.inverse()).log();
         },
         x0);
   }
@@ -397,7 +409,8 @@ TEST(VioTestSuite, RelPoseSE3IncrementTest) {
           Sophus::SE3d T_t_h_sophus_new =
               basalt::KeypointVioEstimator::computeRelPose(T_w_i_h, T_i_c_h,
                                                            T_w_t_new, T_i_c_t);
-          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+//          return Sophus::se3_logd(T_t_h_sophus_new * T_t_h_sophus.inverse());
+          return (T_t_h_sophus_new * T_t_h_sophus.inverse()).log();
         },
         x0);
   }
