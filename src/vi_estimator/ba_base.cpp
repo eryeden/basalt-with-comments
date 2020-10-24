@@ -83,8 +83,8 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
     RR.bottomRightCorner<3, 3>() = R;
 
     //! Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w]
-//    *d_rel_d_h = tmp.Adj() * RR;
-    *d_rel_d_h = (T_i_c_t.inverse() * T_w_i_t.inverse()).Adj(); // My導出バージョン、Pose推定はできるが不安定になる
+    *d_rel_d_h = tmp.Adj() * RR;
+//    *d_rel_d_h = (T_i_c_t.inverse() * T_w_i_t.inverse()).Adj(); // My導出バージョン、Pose推定はできるが不安定になる
   }
 
   if (d_rel_d_t) {
@@ -98,8 +98,8 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
     RR.bottomRightCorner<3, 3>() = R;
 
     //! -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w]
-//    *d_rel_d_t = -tmp2.Adj() * RR; // なぜRRなのか？T_w_i_t.inverse().Adj()ではないのか？
-    *d_rel_d_t = -tmp2.Adj() * T_w_i_t.inverse().Adj(); // My導出バージョン、Pose推定はできるが不安定になる
+    *d_rel_d_t = -tmp2.Adj() * RR; // なぜRRなのか？T_w_i_t.inverse().Adj()ではないのか？
+//    *d_rel_d_t = -tmp2.Adj() * T_w_i_t.inverse().Adj(); // My導出バージョン、Pose推定はできるが不安定になる
   }
 
   return res;

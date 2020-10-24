@@ -14,6 +14,9 @@ target_link_libraries(test_vio gtest gtest_main basalt)
 add_executable(test_nfr src/test_nfr.cpp)
 target_link_libraries(test_nfr gtest gtest_main basalt)
 
+add_executable(test_jacobian src/test_jacobian.cpp)
+target_link_libraries(test_jacobian gtest gtest_main basalt)
+
 
 enable_testing()
 
@@ -26,3 +29,4 @@ include(GoogleTest)
 gtest_add_tests(TARGET test_spline_opt AUTO)
 gtest_add_tests(TARGET test_vio AUTO)
 gtest_add_tests(TARGET test_nfr AUTO)
+gtest_add_tests(TARGET test_jacobian AUTO)
