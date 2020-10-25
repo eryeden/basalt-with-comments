@@ -147,3 +147,59 @@ TEST(JacobianTestSuite, d_MInv_d_MTest) {
     }
 
 }
+
+
+TEST(JacobianTestSuite, d_MInv_d_M_Full_Dec_jacobianTest) {
+    /*
+     * - se3_expd : Decoupled SE3 exponentiation
+     * - SE3d::exp : Coupled SE3 exponentiation
+     */
+
+    Sophus::SE3d M = Sophus::SE3d::exp(Sophus::Vector6d::Random());
+
+
+    Sophus::SE3d MInv = M.inverse();
+    Sophus::Matrix6d d_MInv_d_M, dec_d_MInv_d_M;
+
+
+    // SE3 left incrementの場合のJacobian
+    d_MInv_d_M = - MInv.Adj();
+
+    Sophus::Matrix6d decouple_conversion;
+    decouple_conversion.setIdentity();
+    decouple_conversion.topRightCorner<3,3>() << Sophus::SO3d::hat(M.translation());
+    // Convert to decoupled jacobian
+//    dec_d_MInv_d_M = d_MInv_d_M * decouple_conversion;
+    dec_d_MInv_d_M = d_MInv_d_M;
+
+    // 微小変化
+    Sophus::Vector6d tau;
+//    tau << 1,1,1,1,1,1;
+    tau.setRandom();
+    tau = tau * 1e-2;
+
+    // Full SE3 jacobianによるMinvの変化
+    Sophus::SE3d MInv_new_fullSE3;
+    MInv_new_fullSE3 = Sophus::SE3d::exp(d_MInv_d_M * tau) * MInv;
+    // Decoupled left incrementによるMinvの変化
+    Sophus::SE3d Minv_new_decoupled = MInv;
+    basalt::PoseState::incPose(dec_d_MInv_d_M*tau, Minv_new_decoupled);
+
+
+    std::cout << "Minv: \n"
+    << MInv.matrix()
+    << "\nMinv_new_fullSE3: \n"
+    << MInv_new_fullSE3.matrix()
+    << "\nMinv_new_decoupled: \n"
+    << Minv_new_decoupled.matrix()
+    << "\nfullSE3 - decoupled: \n"
+    << MInv_new_fullSE3.matrix() - Minv_new_decoupled.matrix()
+    << "\ntau: " << tau
+    << "\n norm(dec - fullSE3): " << (Minv_new_decoupled.matrix() - MInv_new_fullSE3.matrix()).norm()
+    << "\n norm(dec - MInv): " << (MInv.matrix() - Minv_new_decoupled.matrix()).norm()
+    << "\n norm(fullSE3 - MInv): " << (MInv.matrix() - MInv_new_fullSE3.matrix()).norm()
+    << std::endl;
+    EXPECT_TRUE(MInv_new_fullSE3.matrix().isApprox(Minv_new_decoupled.matrix(), 1e-3));
+
+
+}

@@ -82,9 +82,11 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
+    // Method 1: Compute Ad(T_i_c_t^-1 T_w_i_t^-1 T_w_i_h) and remove the rotation(R_w_t_h).
     //! Adj(T_c_t_i_h) * diag[R_i_h_w, R_i_h_w]
 //    *d_rel_d_h = tmp.Adj() * RR;
 
+    // Method 2: Compute the full SE3 left jacobian and convert it to decoupled jacobian.
     Sophus::Matrix6d decoupled_conversion_T_w_i_h;
     decoupled_conversion_T_w_i_h.setIdentity();
     decoupled_conversion_T_w_i_h.topRightCorner<3,3>() << Sophus::SO3d::hat(T_w_i_h.translation());
@@ -95,15 +97,17 @@ Sophus::SE3d BundleAdjustmentBase::computeRelPose(const Sophus::SE3d &T_w_i_h,
     //! World to IMU,target
     Eigen::Matrix3d R = T_w_i_t.so3().inverse().matrix();
 
-
     Sophus::Matrix6d RR;
     RR.setZero();
     RR.topLeftCorner<3, 3>() = R;
     RR.bottomRightCorner<3, 3>() = R;
 
+    // Method 1: Compute -Ad(T_i_c_t^-1) and add the rotation(R_w_i_t)
     //! -Adj(T_c_t_i_t) * diag[R_i_t_w, R_i_t_w]
 //    *d_rel_d_t = -tmp2.Adj() * RR; // なぜRRなのか？T_w_i_t.inverse().Adj()ではないのか？
 
+    // Method 2: Compute Ad(T_i_c_t^-1) * (-Ad(T_w_i_t^-1)) and remove the translation(t_w_i_t)
+    // This method is the same way that compute full SE3 left jacobian and convert it to the decoupled left jacobian.
     Sophus::Matrix6d decoupled_conversion_T_w_i_t;
     decoupled_conversion_T_w_i_t.setIdentity();
     decoupled_conversion_T_w_i_t.topRightCorner<3, 3>() << Sophus::SO3d::hat(T_w_i_t.translation());
