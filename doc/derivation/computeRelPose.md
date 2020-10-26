@@ -133,3 +133,23 @@ M = \begin{bmatrix}
 ```
 
 - Jacobian $`\frac{{{}^{\mathcal{E}}}D f(X)}{D X}`$ is taken from equation (44) in http://arxiv.org/abs/1812.01537.
+
+
+
+# Reply
+## Nikolaus
+- 導出は見た感じOK
+- しかしBasaltでは decoupled left incrementを使っているので、Chain ruleをもう一回かける必要がある。
+- Decouled left incrementについてのでFull SE3のincrementの微分はこれ
+- tは、微分しようとしているSE3のTranslation
+- おれの結果にあとからこれを掛けると、Code上と同じ数式になる。
+- 数値微分でも、この結果は検証可能。TestコードをFull SE3のIncrementに変更しないと、Testに失敗すると思うよ。
+
+
+## Kazuki
+- 自分の導出に、Decoupledへの変換行列をかけたら、Codeの数式を得られた。
+- また、TestをFull SE3 left incrementに変更して、Full SE3のDerivationを数値微分で検証すると、Passすることもわかった。
+- 一方、 Decoupled left incrementについてはよく理解できていない。以下の解釈でOK？
+- 俺の解釈：
+- Full SE3 left incrementに対して、計算量的には有利なのは理解できる。
+- もし、Decoupled incrementや、他の<R^3, SO3>, [R^3 x SO3]についての文献があれば
