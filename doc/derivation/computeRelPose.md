@@ -149,7 +149,94 @@ M = \begin{bmatrix}
 ## Kazuki
 - 自分の導出に、Decoupledへの変換行列をかけたら、Codeの数式を得られた。
 - また、TestをFull SE3 left incrementに変更して、Full SE3のDerivationを数値微分で検証すると、Passすることもわかった。
-- 一方、 Decoupled left incrementについてはよく理解できていない。以下の解釈でOK？
+- 一方、 Decoupled left incrementや、変換行列の導出についてはよく理解できていない。以下の解釈でOK？
 - 俺の解釈：
+Decoupled left incrementは変換行列を掛けることで、Full SE3 left incrementと同じ結果をえることができている。
+数式で書くと以下のようなイメージ。
+
+関数$f(X) \in SE3, X \in SE3$であるとする。
+また、
+$\oplus$ : SE3 full left increment, 
+$\boxplus$ : Decoupled left increment
+とする。
+
+このとき、$\boldsymbol{\tau} = [\boldsymbol{v}, \boldsymbol{\omega}]^T \rightarrow \boldsymbol{0}$であるとき、
+$$
+\begin{aligned}
+f(\tau \oplus X) \rightarrow &\frac{{}^{\mathcal{E}}D f(X)}{D X} \boldsymbol{\tau} \oplus X \\
+&= \frac{{}^{\mathcal{E}}D f(X)}{D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times \\
+    \boldsymbol{0}_{33} & I_3
+\end{bmatrix}
+ \boldsymbol{\tau} \boxplus X
+\end{aligned}
+
+$$
+として、Full SE3 incrementの代わりにDecoupled left incrementを使ってSE3のIncrementを計算していると理解した。
+
+
+
 - Full SE3 left incrementに対して、計算量的には有利なのは理解できる。
-- もし、Decoupled incrementや、他の<R^3, SO3>, [R^3 x SO3]についての文献があれば
+- もし、Decoupled incrementや、他の<R^3, SO3>, [R^3 x SO3]について参考になる文献があれば教えてほしい。
+
+
+## Post
+
+I'm sorry for late reply.
+Thank you so much for your kindly answer!!
+
+I could successfully get the expression in the code by post-multiplying the matrix to my derivations.
+And also, I conformed that the jacobian test with my derivations passes when replacing decoupled left increment to full SE3 left increment!
+
+However, decoupled left increment and the conversion matrix 
+$\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times \\
+    \boldsymbol{0}_{33} & I_3
+\end{bmatrix}$
+are still unclear to me.
+Decoupled left increment with conversion matrix dose the same calculation as Full SE3 left increment? like this,
+
+$$
+\begin{aligned}
+f(\tau \oplus X) \rightarrow &\frac{{}^{\mathcal{E}}D f(X)}{D X} \boldsymbol{\tau} \oplus X \\
+&= \frac{{}^{\mathcal{E}}D f(X)}{D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times \\
+    \boldsymbol{0}_{33} & I_3
+\end{bmatrix}
+ \boldsymbol{\tau} \boxplus X,
+\end{aligned}
+$$
+where,
+$$
+\boldsymbol{\tau} = \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix} \rightarrow \boldsymbol{0},
+$$
+$$
+f: SE3 \rightarrow SE3,\\
+X = \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix},
+$$
+
+$\oplus$ : Full SE3 left increment,
+
+$\boxplus$ : Decoupled left increment,
+
+$\frac{{}^{\mathcal{E}}D f(X)}{D X}$ : Full SE3 Left jacobian of f(X) w.r.t. X.
+
+
+
+
+I will appreciate you if you could recommend me some references about decoupled left increment.
+
+# Reply 2
+
+## Nikolaus Demmel
+
+
+## KK
