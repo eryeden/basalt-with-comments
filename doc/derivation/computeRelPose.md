@@ -238,5 +238,203 @@ I will appreciate you if you could recommend me some references about decoupled 
 
 ## Nikolaus Demmel
 
+Nikolausからの返答：
+
+-  "Full SE3 Left jacobian of f(X) w.r.t. X."?の記号はどことを参考にしている？
+
+なでのここでChain ruleを適用するのかの厳密な導出ではありませんが、Conversion matrixは以下のように導けます。
+これは、関数
+$$ f: SE(3) \rightarrow SE(3)$$
+の微分をどうやって定義するかによって、決まっていて、Basaltでは、以下の定義を利用している。
+$$
+\frac{\partial f(X)}{\partial X} := \lim_{\tau \rightarrow 0} \frac{\mathrm{log_d}(f(X \oplus \tau) f(X)^{-1})}{\tau},
+$$
+ここで、$\mathrm{log_d}$は、Decoupled SE3 Logであって、以下の定義になる。
+$$
+\mathrm{lod_d}(X) := \begin{bmatrix}
+    t\\
+    \log(R)
+\end{bmatrix}
+$$
+ここでFull logを使っても極限を計算するときに、二次の項は消えるはずなので同じ結論になるはず。
+
+この微分の定義で恒等写像$f(X)=X$のJacbobianを計算すると、
+$$
+\frac{\partial f(X)}{\partial X} := \begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times \\
+    \boldsymbol{0}_{33} & I_3
+\end{bmatrix}
+$$
+になる。
+
+
+
+PS:
+
+Decoupled left incrementをどこかで見たことはない。また、ここで使っているような計算を見たこともない。
+また、Decoupled left incrementは、必ずしも広く使われている名前なわけではないと思う。
+また、$T \oplus \tau:=\begin{bmatrix}
+    \exp{\omega} & \nu\\
+    0 & 1
+\end{bmatrix}$
+をDecoupled left incrementと呼ぶ人もいる。これあ実はFull left incrementと同じJacobianになる。
 
 ## KK
+
+返答内容：
+
+返信が遅くなってしまいとても申し訳ないです。
+とても役に立つご返信ありがとうございます！！！
+自分のJacobianの記号は、この論文を参考にしています。
+
+$
+\frac{^{\mathcal{E}}D f(X)}{D X}
+$
+ですが、以下の定義になっています。
+$$
+\frac{^{\mathcal{E}}D f(X)}{D X} = 
+\lim_{\boldsymbol{^{\mathcal{E}}\tau}\rightarrow 0} 
+\frac{f(^{\mathcal{E}}\tau \oplus X)\ominus f(X)}
+{^{\mathcal{E}}\tau},
+$$
+where
+
+- $\mathcal{E} = \begin{bmatrix}
+    I_3 & \boldsymbol{0}_{31}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)$ : Origin of SE3.
+- $X=\begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)$
+- $^{\mathcal{E}}\boldsymbol{\tau} = \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix} \in T_\mathcal{E} SE(3)$ : The vector representation of $\boldsymbol{\tau}\hat{} \in \mathfrak{se}3$
+- $^{\mathcal{E}}\tau \oplus X = \begin{bmatrix}
+    \mathrm{Exp}(\boldsymbol{\omega}) & \boldsymbol{V}(\boldsymbol{\omega})\boldsymbol{v} \\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}
+\begin{bmatrix}
+R & \boldsymbol{t}\\
+\boldsymbol{0}_{13} & 1
+\end{bmatrix}
+$ : Full left increment of SE3 ([1] eq. 27, eq. 172)
+- $A \ominus B = \mathrm{Log}(AB^{-1})$, $A, B \in SE(3)$ : from [1] eq.28
+- $\mathrm{Log}(X) = \begin{bmatrix}
+    \boldsymbol{V}(\boldsymbol{w})^{-1} \boldsymbol{t}\\
+    Log_{SO3}(R)
+\end{bmatrix}$ : from [1] eq.173
+
+
+Jacobianの導出や、Decoupled left incrementという言葉の使われ方まで情報をいただきありがとうございました。
+おかげて、前回のポストの内容が間違っていることに気づけました。
+関数ではなく、微小変化の定義からもJacobianが定義できることをなかなか理解できず時間がかかりましたが、SE3やJacobianについて考える良い機会になりました。ありがとうございます。
+
+### Pose
+
+I'm sorry for the late reply and also thank you for very helpful information.
+
+
+I'm sorry for the late reply and also Thank you for the very helpful information.
+
+#### Notations:
+Notations used in my derivation are taken from the following paper.
+Solà J, Deray J, Atchuthan D. A micro Lie theory for state estimation in robotics. Available from: http://arxiv.org/abs/1812.01537.
+
+"Full SE3 Left jacobian of f(X) w.r.t. X." is defined as follows,
+$$
+\frac{^{\mathcal{E}}D f(X)}{D X} = 
+\lim_{\boldsymbol{^{\mathcal{E}}\tau}\rightarrow 0} 
+\frac{f(^{\mathcal{E}}\tau \oplus X)\ominus f(X)}
+{^{\mathcal{E}}\tau},
+$$
+where
+
+- $\mathcal{E} = \begin{bmatrix}
+    I_3 & \boldsymbol{0}_{31}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)$ : Origin of SE3.
+- $X=\begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)$
+- $^{\mathcal{E}}\boldsymbol{\tau} = \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix} \in T_\mathcal{E} SE(3)$ : The vector representation of $\boldsymbol{\tau}\hat{} \in \mathfrak{se}3$
+- $^{\mathcal{E}}\tau \oplus X = \begin{bmatrix}
+    \mathrm{Exp}(\boldsymbol{\omega}) & \boldsymbol{V}(\boldsymbol{\omega})\boldsymbol{v} \\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}
+\begin{bmatrix}
+R & \boldsymbol{t}\\
+\boldsymbol{0}_{13} & 1
+\end{bmatrix}
+$ : Full left increment of SE3 ([1] eq. 27, eq. 172)
+- $A \ominus B = \mathrm{Log}(AB^{-1})$, $A, B \in SE(3)$ : from [1] eq.28
+- $\mathrm{Log}(X) = \begin{bmatrix}
+    \boldsymbol{V}(\boldsymbol{w})^{-1} \boldsymbol{t}\\
+    Log_{SO3}(R)
+\end{bmatrix}$ : from [1] eq.173
+
+
+#### Decoupled left increment:
+Thank you for the information on the derivation of jacobian and even the use of the term "decoupled left increment".
+I realized that my last post was wrong.
+It took me a while to understand those different Jacobians can be defined by different infinitesimal increments (Full or Decoupled). 
+It was a good opportunity to learn  SE3 and Jacobian.  Thank you!
+
+
+
+### Post
+I'm sorry for the late reply and thank you for the very helpful information!
+
+#### Notations:
+Notations used in my derivation are taken from the following paper.
+
+[1] Solà J, Deray J, Atchuthan D. A micro Lie theory for state estimation in robotics. Available from: http://arxiv.org/abs/1812.01537.
+
+"Full SE3 Left jacobian of f(X) w.r.t. X." is defined as follows,
+```math
+\frac{^{\mathcal{E}}D f(X)}{D X} = 
+\lim_{\boldsymbol{^{\mathcal{E}}\tau}\rightarrow 0} 
+\frac{f(^{\mathcal{E}}\tau \oplus X)\ominus f(X)}
+{^{\mathcal{E}}\tau},
+```
+where
+
+- $`\mathcal{E} = \begin{bmatrix}
+    I_3 & \boldsymbol{0}_{31}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)`$ : Origin of SE3.
+- $`X=\begin{bmatrix}
+    R & \boldsymbol{t}\\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}\in SE(3)`$
+- $`^{\mathcal{E}}\boldsymbol{\tau} = \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix} \in T_\mathcal{E} SE(3)`$ : The vector representation of $`\boldsymbol{\tau}\hat{} \in \mathfrak{se}3`$
+- $`^{\mathcal{E}}\tau \oplus X = \begin{bmatrix}
+    \mathrm{Exp}(\boldsymbol{\omega}) & \boldsymbol{V}(\boldsymbol{\omega})\boldsymbol{v} \\
+    \boldsymbol{0}_{13} & 1
+\end{bmatrix}
+\begin{bmatrix}
+R & \boldsymbol{t}\\
+\boldsymbol{0}_{13} & 1
+\end{bmatrix}
+`$ : Full left increment of SE3 ([1] eq. 27, eq. 172)
+- $`A \ominus B = \mathrm{Log}(AB^{-1})`$, $`A, B \in SE(3)`$ : from [1] eq.28
+- $`\mathrm{Log}(X) = \begin{bmatrix}
+    \boldsymbol{V}(\boldsymbol{w})^{-1} \boldsymbol{t}\\
+    Log_{SO3}(R)
+\end{bmatrix}`$ : from [1] eq.173
+
+
+#### Decoupled left increment:
+Thank you for the information on the derivation of jacobian and even the use of the term "decoupled left increment".
+
+I realized that my last post was wrong.
+It took me a while to understand different Jacobians can be defined by different infinitesimal transformations (Full or Decoupled). 
+It was a good opportunity to learn SE3 and Jacobian. Thank you!
