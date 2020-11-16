@@ -327,9 +327,95 @@ $ : Full left increment of SE3 ([1] eq. 27, eq. 172)
 \end{bmatrix}$ : from [1] eq.173
 
 
-Jacobianの導出や、Decoupled left incrementという言葉の使われ方まで情報をいただきありがとうございました。
-おかげて、前回のポストの内容が間違っていることに気づけました。
-関数ではなく、微小変化の定義からもJacobianが定義できることをなかなか理解できず時間がかかりましたが、SE3やJacobianについて考える良い機会になりました。ありがとうございます。
+Jacobianの導出や、Decoupled left incrementについての情報ありがとうございました。
+頂いた導出のおかげて、このIssueで疑問だった$\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times\\
+    0_3 & I_3
+\end{bmatrix}$
+が登場する理由を理解できたように思います。
+Full SE3 left JacobianをBasaltで使っているDecoupled log, Decoupled left incrementのJacobianへの変換は、以下のようなCahin ruleがあると自分は理解しました。
+
+$$
+\begin{aligned}
+\frac{_{d}D f(X)}{_d D X} &= \frac{_d D f(X)}{_f D f(X)} \frac{_f D f(X)}{_f D X} \frac{_f D X}{_d D X}\\
+&= \begin{bmatrix}
+    I_3 & 0_3\\
+    0_3 & I_3
+\end{bmatrix}
+\frac{_f D f(X)}{_f D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times R\\
+    0_3 & I_3
+\end{bmatrix}\\
+&=\frac{_f D f(X)}{_f D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times R\\
+    0_3 & I_3
+\end{bmatrix},
+    
+\end{aligned}
+$$
+
+where,
+
+- $\frac{_{d}D f(X)}{_d D X}$ is the jacobian used in the basalt defined by decoupled left increment and decoupled log,
+$$\frac{_{d}D f(X)}{_d D X} := \lim_{\tau \rightarrow 0} \frac{\log_d(f(X \oplus_d \tau)f(X)^{-1})}{\tau},$$ 
+
+- $\frac{_d D f(X)}{_f D f(X)}$ is the jacobian of identity function defined by full SE3 left increment and decoupled log,
+$$\frac{_d D f(X)}{_f D f(X)} := \lim_{\tau \rightarrow 0} \frac{\log_d((f(X) \oplus_f \tau) f(X)^{-1})}{\tau}
+=I_6,$$
+
+- $\frac{_f D f(X)}{_f D X}$ is the full SE3 jacobian of $f(X)$ w.r.t. $X$,
+$$\frac{_f D f(X)}{_f D X} := \lim_{\tau \rightarrow 0} \frac{\log_f (f(X \oplus_f \tau) f(X)^{-1}) }{\tau},$$
+
+- $\frac{_f D X}{_d D X}$ is the jacobian of the identity function defined by decoupled left increment and full SE3 log,
+$$\frac{_f D X}{_d D X} := \lim_{\tau \rightarrow 0} \frac{\log_f ((X \oplus_d \tau) X^{-1})}{\tau}
+=\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times\\
+    0_3 & I_3
+\end{bmatrix}
+,$$
+
+- 演算子、$\tau, X$の定義：
+$$
+\begin{aligned}
+\log_d(X) &:= \begin{bmatrix}
+    \boldsymbol{t}\\
+    \log(R)
+\end{bmatrix},\\
+\log_f(X) &:= \begin{bmatrix}
+    V(\log(R))^{-1} \boldsymbol{t}\\
+    \log(R)
+\end{bmatrix},\\
+X \oplus_d \tau &:= \begin{bmatrix}
+    \exp(\boldsymbol{\omega}) R & \boldsymbol{v} + \boldsymbol{t}\\
+    0_{13} & 1    
+\end{bmatrix},\\
+X \oplus_f \tau &:= \begin{bmatrix}
+    \exp(\boldsymbol{\omega}) & V(\omega) \boldsymbol{v}\\
+    0_{13} & 1
+\end{bmatrix} \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    0_{13} & 1
+\end{bmatrix},\\
+X &= \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    0_{13} & 1
+\end{bmatrix},\\
+\tau &= \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix}
+
+\end{aligned}
+$$
+
+関数$V$, $V^{-1}$は、文献１の式（）です。
+
+incrementやLogの定義の違いに戸惑いましたが、JacobianやAdjointについて考える良い機会にありました。ありがとうございます！
+
+
+
 
 ### Pose
 
@@ -433,8 +519,89 @@ R & \boldsymbol{t}\\
 
 
 #### Decoupled left increment:
-Thank you for the information on the derivation of jacobian and even the use of the term "decoupled left increment".
+Thank you for the derivation of jacobian and information of the term "decoupled left increment".
+Thanks to your derivation, it makes sense to me why $\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times\\
+    0_3 & I_3
+\end{bmatrix}$
+is used.
+In my understanding, 
+the conversion from the full SE3 left jacobian to the jacobian used in the basalt is derivated by the chain rule as follows, 
 
-I realized that my last post was wrong.
-It took me a while to understand different Jacobians can be defined by different infinitesimal transformations (Full or Decoupled). 
-It was a good opportunity to learn SE3 and Jacobian. Thank you!
+$$
+\begin{aligned}
+\frac{_{d}D f(X)}{_d D X} &= \frac{_d D f(X)}{_f D f(X)} \frac{_f D f(X)}{_f D X} \frac{_f D X}{_d D X}\\
+&= \begin{bmatrix}
+    I_3 & 0_3\\
+    0_3 & I_3
+\end{bmatrix}
+\frac{_f D f(X)}{_f D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times R\\
+    0_3 & I_3
+\end{bmatrix}\\
+&=\frac{_f D f(X)}{_f D X}
+\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times R\\
+    0_3 & I_3
+\end{bmatrix},
+    
+\end{aligned}
+$$
+
+where,
+
+- $\frac{_{d}D f(X)}{_d D X}$ is the jacobian used in the basalt defined by decoupled left increment and decoupled log,
+$$\frac{_{d}D f(X)}{_d D X} := \lim_{\tau \rightarrow 0} \frac{\log_d(f(X \oplus_d \tau)f(X)^{-1})}{\tau},$$ 
+
+- $\frac{_d D f(X)}{_f D f(X)}$ is the jacobian of identity function defined by full SE3 left increment and decoupled log,
+$$\frac{_d D f(X)}{_f D f(X)} := \lim_{\tau \rightarrow 0} \frac{\log_d((f(X) \oplus_f \tau) f(X)^{-1})}{\tau}
+=I_6,$$
+
+- $\frac{_f D f(X)}{_f D X}$ is the full SE3 jacobian of $f(X)$ w.r.t. $X$,
+$$\frac{_f D f(X)}{_f D X} := \lim_{\tau \rightarrow 0} \frac{\log_f (f(X \oplus_f \tau) f(X)^{-1}) }{\tau},$$
+
+- $\frac{_f D X}{_d D X}$ is the jacobian of the identity function defined by decoupled left increment and full SE3 log,
+$$\frac{_f D X}{_d D X} := \lim_{\tau \rightarrow 0} \frac{\log_f ((X \oplus_d \tau) X^{-1})}{\tau}
+=\begin{bmatrix}
+    I_3 & [\boldsymbol{t}]_\times\\
+    0_3 & I_3
+\end{bmatrix}
+,$$
+
+- Definition for operators, $\tau, X$：
+$$
+\begin{aligned}
+\log_d(X) &:= \begin{bmatrix}
+    \boldsymbol{t}\\
+    \log(R)
+\end{bmatrix},\\
+\log_f(X) &:= \begin{bmatrix}
+    V(\log(R))^{-1} \boldsymbol{t}\\
+    \log(R)
+\end{bmatrix},\\
+X \oplus_d \tau &:= \begin{bmatrix}
+    \exp(\boldsymbol{\omega}) R & \boldsymbol{v} + \boldsymbol{t}\\
+    0_{13} & 1    
+\end{bmatrix},\\
+X \oplus_f \tau &:= \begin{bmatrix}
+    \exp(\boldsymbol{\omega}) & V(\omega) \boldsymbol{v}\\
+    0_{13} & 1
+\end{bmatrix} \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    0_{13} & 1
+\end{bmatrix},\\
+X &= \begin{bmatrix}
+    R & \boldsymbol{t}\\
+    0_{13} & 1
+\end{bmatrix},\\
+\tau &= \begin{bmatrix}
+    \boldsymbol{v}\\
+    \boldsymbol{\omega}
+\end{bmatrix}
+
+\end{aligned}
+$$
+
+The function $V$ is eq.174 in [1].
+I was initially confused by the differences in the definitions of increment and log, but it was a good opportunity to think about jacobian and adjoint of SE3. Thank you!
