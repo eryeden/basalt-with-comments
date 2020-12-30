@@ -67,6 +67,7 @@ struct TimeCamId {
 
   FrameId frame_id;
   CamId cam_id;
+
 };
 
 inline std::ostream& operator<<(std::ostream& os, const TimeCamId& tcid) {
